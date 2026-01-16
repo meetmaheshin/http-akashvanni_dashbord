@@ -13,7 +13,8 @@ import {
   DollarSign,
   Cog,
   User,
-  FileText
+  FileText,
+  Upload
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,6 +32,7 @@ const adminNavItems = [
   { name: 'Customers', path: '/admin/customers', icon: Users },
   { name: 'Transactions', path: '/admin/transactions', icon: History },
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
+  { name: 'Import CSV', path: '/admin/import', icon: Upload },
   { name: 'Pricing', path: '/admin/pricing', icon: DollarSign },
   { name: 'Settings', path: '/admin/settings', icon: Cog },
 ];

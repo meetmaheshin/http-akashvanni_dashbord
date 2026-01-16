@@ -16,6 +16,7 @@ import Pricing from './pages/admin/Pricing';
 import Settings from './pages/admin/Settings';
 import AdminTransactions from './pages/admin/AdminTransactions';
 import AdminMessages from './pages/admin/AdminMessages';
+import ImportMessages from './pages/admin/ImportMessages';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -175,6 +176,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/import"
+        element={
+          <ProtectedRoute adminOnly>
+            <ImportMessages />
           </ProtectedRoute>
         }
       />
