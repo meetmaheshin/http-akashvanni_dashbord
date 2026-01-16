@@ -37,9 +37,11 @@ export default function Login() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-xl">
-              <MessageSquare className="h-8 w-8 text-white" />
-            </div>
+            <img
+              src="/site_logo.png"
+              alt="Logo"
+              className="h-16 w-auto"
+            />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
           <p className="mt-2 text-gray-600">Sign in to your account</p>

@@ -67,10 +67,11 @@ export default function Layout({ children }) {
       >
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <MessageSquare className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-lg">WA Dashboard</span>
+            <img
+              src="/Dashbord_logo.png"
+              alt="Dashboard Logo"
+              className="h-10 w-auto"
+            />
           </div>
           <button
             className="lg:hidden p-1"
