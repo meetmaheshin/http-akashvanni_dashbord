@@ -81,7 +81,7 @@ def get_transactions(
 @router.get("/messages", response_model=List[schemas.MessageResponse])
 def get_messages(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=1000),
     status: str = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
