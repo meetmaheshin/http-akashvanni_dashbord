@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
 from typing import List
+import csv
+import io
 from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_admin
@@ -365,6 +367,113 @@ def delete_api_config(
     db.commit()
 
     return {"message": "Config deleted"}
+
+# CSV Import for messages
+@router.post("/import-messages/{user_id}")
+def import_messages_csv(
+    user_id: int,
+    file: UploadFile = File(...),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    # Verify customer exists
+    user = db.query(models.User).filter(
+        models.User.id == user_id,
+        models.User.role == "customer"
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    # Read and parse CSV
+    try:
+        contents = file.file.read().decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(contents))
+
+        imported_count = 0
+        skipped_count = 0
+
+        for row in csv_reader:
+            # Check if message already exists (by whatsapp_message_id)
+            message_sid = row.get('MessageSid', '')
+            if message_sid:
+                existing = db.query(models.Message).filter(
+                    models.Message.whatsapp_message_id == message_sid
+                ).first()
+                if existing:
+                    skipped_count += 1
+                    continue
+
+            # Parse the CSV row
+            direction = row.get('Direction', 'outbound-api')
+            from_number = row.get('From', '').replace('whatsapp:', '')
+            to_number = row.get('To', '').replace('whatsapp:', '')
+            body = row.get('Body', '')
+            status = row.get('Status', 'sent')
+            date_sent = row.get('DateSent', '')
+
+            # Determine recipient phone based on direction
+            if direction == 'inbound':
+                recipient_phone = from_number
+            else:
+                recipient_phone = to_number
+
+            # Parse date
+            created_at = datetime.utcnow()
+            sent_at = None
+            if date_sent:
+                try:
+                    created_at = datetime.strptime(date_sent, '%Y-%m-%d %H:%M:%S')
+                    sent_at = created_at
+                except:
+                    try:
+                        created_at = datetime.strptime(date_sent, '%Y-%m-%dT%H:%M:%S')
+                        sent_at = created_at
+                    except:
+                        pass
+
+            # Map status
+            status_map = {
+                'delivered': 'delivered',
+                'sent': 'sent',
+                'read': 'read',
+                'failed': 'failed',
+                'received': 'delivered'
+            }
+            mapped_status = status_map.get(status.lower(), 'sent')
+
+            # Create message record
+            message = models.Message(
+                user_id=user_id,
+                recipient_phone=recipient_phone,
+                recipient_name=None,
+                message_type='session',
+                template_name=None,
+                message_content=body,
+                status=mapped_status,
+                whatsapp_message_id=message_sid if message_sid else None,
+                cost=0,
+                created_at=created_at,
+                sent_at=sent_at,
+                delivered_at=created_at if mapped_status == 'delivered' else None,
+                read_at=created_at if mapped_status == 'read' else None,
+                error_message=None
+            )
+            db.add(message)
+            imported_count += 1
+
+        db.commit()
+
+        return {
+            "message": "CSV import completed",
+            "imported": imported_count,
+            "skipped": skipped_count,
+            "user_id": user_id
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error processing CSV: {str(e)}")
 
 # All transactions (for admin overview)
 @router.get("/transactions", response_model=List[schemas.TransactionResponse])
