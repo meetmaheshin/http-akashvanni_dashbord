@@ -1,0 +1,157 @@
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import {
+  LayoutDashboard,
+  MessageSquare,
+  CreditCard,
+  History,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Users,
+  DollarSign,
+  Cog,
+  User,
+  FileText
+} from 'lucide-react';
+import { useState } from 'react';
+
+const customerNavItems = [
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Messages', path: '/messages', icon: MessageSquare },
+  { name: 'Transactions', path: '/transactions', icon: History },
+  { name: 'Invoices', path: '/invoices', icon: FileText },
+  { name: 'Add Money', path: '/add-money', icon: CreditCard },
+  { name: 'Profile', path: '/profile', icon: User },
+];
+
+const adminNavItems = [
+  { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+  { name: 'Customers', path: '/admin/customers', icon: Users },
+  { name: 'Transactions', path: '/admin/transactions', icon: History },
+  { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
+  { name: 'Pricing', path: '/admin/pricing', icon: DollarSign },
+  { name: 'Settings', path: '/admin/settings', icon: Cog },
+];
+
+export default function Layout({ children }) {
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isAdmin = user?.role === 'admin';
+  const navItems = isAdmin ? adminNavItems : customerNavItems;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 p-2 rounded-lg">
+              <MessageSquare className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-bold text-lg">WA Dashboard</span>
+          </div>
+          <button
+            className="lg:hidden p-1"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="p-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <span className="text-blue-600 font-medium">
+                {user?.name?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{user?.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors w-full px-3 py-2 rounded-lg hover:bg-red-50"
+          >
+            <LogOut className="h-5 w-5" />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        {/* Top bar */}
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+          <div className="flex items-center justify-between px-4 py-3">
+            <button
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-4">
+              {!isAdmin && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Balance</p>
+                  <p className="font-bold text-green-600">
+                    ₹{(user?.balance / 100 || 0).toFixed(2)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="p-4 lg:p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
