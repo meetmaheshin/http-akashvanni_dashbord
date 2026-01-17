@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .database import engine, Base
-from .routers import auth, customer, payments, admin, messages
+from .routers import auth, customer, payments, admin, messages, whatsapp
 from . import models
 from .config import settings
 
@@ -103,6 +103,7 @@ app.include_router(customer.router)
 app.include_router(payments.router)
 app.include_router(messages.router)
 app.include_router(admin.router)
+app.include_router(whatsapp.router)
 
 @app.get("/")
 def root():

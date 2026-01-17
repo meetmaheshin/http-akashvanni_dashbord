@@ -53,6 +53,16 @@ class User(Base):
     # Balance in paise (100 paise = ₹1)
     balance = Column(Integer, default=0)
 
+    # WhatsApp Business Integration
+    whatsapp_access_token = Column(Text)  # Meta access token
+    whatsapp_waba_id = Column(String(100))  # WhatsApp Business Account ID
+    whatsapp_phone_number_id = Column(String(100))  # Phone Number ID for API calls
+    whatsapp_phone_number = Column(String(20))  # Display phone number
+    whatsapp_business_name = Column(String(255))  # Business name from Meta
+    whatsapp_display_name = Column(String(255))  # Verified display name
+    whatsapp_quality_rating = Column(String(20))  # GREEN, YELLOW, RED
+    whatsapp_connected_at = Column(DateTime(timezone=True))
+
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

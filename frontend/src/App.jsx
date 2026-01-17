@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/customer/Dashboard';
@@ -10,6 +11,7 @@ import Messages from './pages/customer/Messages';
 import AddMoney from './pages/customer/AddMoney';
 import Profile from './pages/customer/Profile';
 import Invoices from './pages/customer/Invoices';
+import WhatsAppConnect from './pages/customer/WhatsAppConnect';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Customers from './pages/admin/Customers';
 import Pricing from './pages/admin/Pricing';
@@ -17,6 +19,7 @@ import Settings from './pages/admin/Settings';
 import AdminTransactions from './pages/admin/AdminTransactions';
 import AdminMessages from './pages/admin/AdminMessages';
 import ImportMessages from './pages/admin/ImportMessages';
+import WhatsAppSettings from './pages/admin/WhatsAppSettings';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -129,6 +132,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/whatsapp-connect"
+        element={
+          <ProtectedRoute>
+            <WhatsAppConnect />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin routes */}
       <Route
@@ -187,10 +198,21 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/whatsapp"
+        element={
+          <ProtectedRoute adminOnly>
+            <WhatsAppSettings />
+          </ProtectedRoute>
+        }
+      />
 
-      {/* Redirect root to login */}
-      <Route path="/" element={<Navigate to="/login" />} />
-      <Route path="*" element={<Navigate to="/login" />} />
+      {/* Landing page */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/landing" element={<Landing />} />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }

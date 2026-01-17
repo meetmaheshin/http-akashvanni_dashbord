@@ -2,12 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
 import csv
 import io
+import os
 from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_admin
+
+
+class WhatsAppConfigUpdate(BaseModel):
+    meta_app_id: Optional[str] = None
+    meta_app_secret: Optional[str] = None
+    meta_redirect_uri: Optional[str] = None
+    meta_config_id: Optional[str] = None
+    meta_webhook_verify_token: Optional[str] = None
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -544,3 +554,87 @@ def get_all_messages(
         result.append(resp)
 
     return result
+
+
+# ========== WhatsApp Configuration Endpoints ==========
+
+@router.get("/whatsapp-config")
+def get_whatsapp_config(
+    admin: models.User = Depends(get_current_admin)
+):
+    """Get WhatsApp/Meta API configuration"""
+    return {
+        "meta_app_id": os.getenv("META_APP_ID", ""),
+        "meta_app_secret": "***" if os.getenv("META_APP_SECRET") else "",  # Don't expose secret
+        "meta_redirect_uri": os.getenv("META_REDIRECT_URI", "https://akashvanni.com/whatsapp-connect"),
+        "meta_config_id": os.getenv("META_CONFIG_ID", ""),
+        "meta_webhook_verify_token": os.getenv("META_WEBHOOK_VERIFY_TOKEN", ""),
+    }
+
+
+@router.put("/whatsapp-config")
+def update_whatsapp_config(
+    config: WhatsAppConfigUpdate,
+    admin: models.User = Depends(get_current_admin)
+):
+    """Update WhatsApp/Meta API configuration - writes to .env file"""
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+
+    # Read existing .env content
+    env_content = {}
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    env_content[key] = value
+
+    # Update with new values (only if provided and not empty)
+    if config.meta_app_id:
+        env_content["META_APP_ID"] = config.meta_app_id
+        os.environ["META_APP_ID"] = config.meta_app_id
+    if config.meta_app_secret and config.meta_app_secret != "***":
+        env_content["META_APP_SECRET"] = config.meta_app_secret
+        os.environ["META_APP_SECRET"] = config.meta_app_secret
+    if config.meta_redirect_uri:
+        env_content["META_REDIRECT_URI"] = config.meta_redirect_uri
+        os.environ["META_REDIRECT_URI"] = config.meta_redirect_uri
+    if config.meta_config_id:
+        env_content["META_CONFIG_ID"] = config.meta_config_id
+        os.environ["META_CONFIG_ID"] = config.meta_config_id
+    if config.meta_webhook_verify_token:
+        env_content["META_WEBHOOK_VERIFY_TOKEN"] = config.meta_webhook_verify_token
+        os.environ["META_WEBHOOK_VERIFY_TOKEN"] = config.meta_webhook_verify_token
+
+    # Write back to .env file
+    with open(env_path, 'w') as f:
+        for key, value in env_content.items():
+            f.write(f"{key}={value}\n")
+
+    return {"message": "WhatsApp configuration updated successfully"}
+
+
+@router.get("/whatsapp-customers")
+def get_whatsapp_customers(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all customers who have connected WhatsApp"""
+    customers = db.query(models.User).filter(
+        models.User.role == "customer",
+        models.User.whatsapp_waba_id.isnot(None)
+    ).all()
+
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "email": c.email,
+            "whatsapp_business_name": c.whatsapp_business_name,
+            "whatsapp_phone_number": c.whatsapp_phone_number,
+            "whatsapp_quality_rating": c.whatsapp_quality_rating,
+            "whatsapp_connected_at": c.whatsapp_connected_at,
+        }
+        for c in customers
+    ]

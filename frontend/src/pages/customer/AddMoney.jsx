@@ -3,9 +3,12 @@ import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, CreditCard, Loader2, Check, X, FileText, AlertCircle } from 'lucide-react';
+import { Wallet, CreditCard, Loader2, Check, X, FileText, AlertCircle, Calculator, ArrowRight } from 'lucide-react';
 
 const presetAmounts = [100, 200, 500, 1000, 2000, 5000];
+
+// Quick balance amounts - what customer wants to receive
+const quickBalanceAmounts = [100, 500, 1000, 2000, 5000];
 
 export default function AddMoney() {
   const { user, refreshUser } = useAuth();
@@ -67,6 +70,13 @@ export default function AddMoney() {
       total: amountRupees,
       credited: subtotal / 100,
     };
+  };
+
+  // Calculate how much to pay to get desired balance
+  const calculatePaymentForBalance = (desiredBalance) => {
+    // If customer wants ₹100 in wallet, they need to pay ₹100 * 1.18 = ₹118
+    const paymentNeeded = Math.ceil(desiredBalance * 1.18);
+    return paymentNeeded;
   };
 
   const handlePayment = async () => {
@@ -284,6 +294,48 @@ export default function AddMoney() {
               placeholder="Enter amount"
               min="1"
             />
+          </div>
+        </div>
+
+        {/* Quick Balance Calculator */}
+        <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="h-5 w-5 text-green-600" />
+            <h4 className="font-semibold text-gray-900">Want exact balance in wallet?</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Click to auto-calculate payment amount (includes 18% GST)
+          </p>
+
+          <div className="grid grid-cols-5 gap-2">
+            {quickBalanceAmounts.map((balance) => {
+              const payAmount = calculatePaymentForBalance(balance);
+              return (
+                <button
+                  key={balance}
+                  onClick={() => setAmount(payAmount.toString())}
+                  className={`relative p-3 rounded-lg border transition-all text-center ${
+                    amount === payAmount.toString()
+                      ? 'bg-green-600 border-green-600 text-white'
+                      : 'bg-white border-gray-200 hover:border-green-400 hover:bg-green-50'
+                  }`}
+                >
+                  <div className={`text-xs ${amount === payAmount.toString() ? 'text-green-100' : 'text-gray-500'}`}>
+                    Get
+                  </div>
+                  <div className={`font-bold ${amount === payAmount.toString() ? 'text-white' : 'text-green-700'}`}>
+                    ₹{balance}
+                  </div>
+                  <div className={`text-xs mt-1 ${amount === payAmount.toString() ? 'text-green-100' : 'text-gray-500'}`}>
+                    Pay ₹{payAmount}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 text-xs text-gray-500 text-center">
+            Example: Pay ₹118 to get ₹100 balance (₹18 GST)
           </div>
         </div>
 

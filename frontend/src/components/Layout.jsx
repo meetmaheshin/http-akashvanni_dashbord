@@ -14,12 +14,14 @@ import {
   Cog,
   User,
   FileText,
-  Upload
+  Upload,
+  Smartphone
 } from 'lucide-react';
 import { useState } from 'react';
 
 const customerNavItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'WhatsApp', path: '/whatsapp-connect', icon: Smartphone },
   { name: 'Messages', path: '/messages', icon: MessageSquare },
   { name: 'Transactions', path: '/transactions', icon: History },
   { name: 'Invoices', path: '/invoices', icon: FileText },
@@ -34,6 +36,7 @@ const adminNavItems = [
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
   { name: 'Import CSV', path: '/admin/import', icon: Upload },
   { name: 'Pricing', path: '/admin/pricing', icon: DollarSign },
+  { name: 'WhatsApp API', path: '/admin/whatsapp', icon: Smartphone },
   { name: 'Settings', path: '/admin/settings', icon: Cog },
 ];
 
