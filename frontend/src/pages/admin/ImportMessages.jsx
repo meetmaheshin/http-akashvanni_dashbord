@@ -17,6 +17,8 @@ export default function ImportMessages() {
   const [loading, setLoading] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [result, setResult] = useState(null);
+  const [messageType, setMessageType] = useState('template'); // template or session
+  const [deductBalance, setDeductBalance] = useState(true);
 
   useEffect(() => {
     fetchCustomers();
@@ -63,16 +65,22 @@ export default function ImportMessages() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await api.post(`/admin/import-messages/${selectedUserId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const res = await api.post(
+        `/admin/import-messages/${selectedUserId}?message_type=${messageType}&deduct_balance=${deductBalance}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
       setResult({
         success: true,
         imported: res.data.imported,
         skipped: res.data.skipped,
+        totalCost: res.data.total_cost_rupees,
+        balanceDeducted: res.data.balance_deducted,
       });
       toast.success(`Imported ${res.data.imported} messages`);
       setFile(null);
@@ -144,6 +152,55 @@ export default function ImportMessages() {
           </div>
         )}
 
+        {/* Message Type Selection */}
+        <div className="mb-6">
+          <label className="label">Message Type & Pricing</label>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setMessageType('template')}
+              className={`p-4 rounded-lg border-2 text-left transition-all ${
+                messageType === 'template'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="font-medium text-gray-900">Template Message</div>
+              <div className="text-2xl font-bold text-blue-600 mt-1">₹2.00</div>
+              <div className="text-xs text-gray-500 mt-1">Per message</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMessageType('session')}
+              className={`p-4 rounded-lg border-2 text-left transition-all ${
+                messageType === 'session'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="font-medium text-gray-900">Session Message</div>
+              <div className="text-2xl font-bold text-green-600 mt-1">₹1.00</div>
+              <div className="text-xs text-gray-500 mt-1">Per message (reply within 24h)</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Deduct Balance Option */}
+        <div className="mb-6">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={deductBalance}
+              onChange={(e) => setDeductBalance(e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div>
+              <span className="font-medium text-gray-900">Deduct balance from customer</span>
+              <p className="text-sm text-gray-500">Uncheck if messages were already charged</p>
+            </div>
+          </label>
+        </div>
+
         {/* File Upload */}
         <div className="mb-6">
           <label className="label">CSV File</label>
@@ -205,6 +262,11 @@ export default function ImportMessages() {
                     <p className="text-sm text-green-600">
                       {result.imported} messages imported, {result.skipped} skipped (duplicates)
                     </p>
+                    {result.balanceDeducted && (
+                      <p className="text-sm text-green-700 font-medium mt-1">
+                        ₹{result.totalCost?.toFixed(2)} deducted from customer balance
+                      </p>
+                    )}
                   </div>
                 </>
               ) : (

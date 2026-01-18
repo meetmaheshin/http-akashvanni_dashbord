@@ -384,6 +384,7 @@ def import_messages_csv(
     user_id: int,
     file: UploadFile = File(...),
     deduct_balance: bool = Query(True, description="Deduct balance for imported messages"),
+    message_type: str = Query("template", description="Message type: template (₹2) or session (₹1)"),
     admin: models.User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -396,11 +397,17 @@ def import_messages_csv(
     if not user:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    # Get message pricing (session message price)
+    # Get message pricing based on message_type parameter
+    msg_type = message_type if message_type in ["template", "session"] else "template"
     pricing = db.query(models.PricingConfig).filter(
-        models.PricingConfig.message_type == "session"
+        models.PricingConfig.message_type == msg_type
     ).first()
-    message_cost = pricing.price if pricing else 100  # Default 100 paise = ₹1
+
+    # Default prices: template = ₹2 (200 paise), session = ₹1 (100 paise)
+    if pricing:
+        message_cost = pricing.price
+    else:
+        message_cost = 200 if msg_type == "template" else 100
 
     # Read and parse CSV
     try:
@@ -472,8 +479,8 @@ def import_messages_csv(
                 user_id=user_id,
                 recipient_phone=recipient_phone,
                 recipient_name=None,
-                message_type='session',
-                template_name=None,
+                message_type=msg_type,
+                template_name=f"CSV Import - {msg_type}" if msg_type == "template" else None,
                 message_content=body,
                 direction=direction if direction in ['inbound', 'outbound'] else 'outbound',
                 status=mapped_status,
