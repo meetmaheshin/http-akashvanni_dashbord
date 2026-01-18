@@ -3,10 +3,17 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
 import httpx
+import os
+from twilio.rest import Client as TwilioClient
 from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_user
 from ..config import settings
+
+# Twilio configuration - set these in Railway environment variables
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -54,55 +61,36 @@ async def send_message(
     db.add(db_message)
     db.flush()  # Get the message ID
 
-    # Try to send via WhatsApp API (if configured)
-    whatsapp_config = db.query(models.APIConfig).filter(
-        models.APIConfig.name == "whatsapp",
-        models.APIConfig.is_active == True
-    ).first()
-
+    # Send via Twilio WhatsApp API
     send_success = False
     error_message = None
 
-    if whatsapp_config and whatsapp_config.api_url and whatsapp_config.api_key:
-        try:
-            # This is a placeholder for actual WhatsApp API call
-            # You'll need to adjust based on your WhatsApp provider
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    whatsapp_config.api_url,
-                    headers={
-                        "Authorization": f"Bearer {whatsapp_config.api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "to": message.recipient_phone,
-                        "type": "template" if message.message_type == "template" else "text",
-                        "template_name": message.template_name,
-                        "text": message.message_content
-                    },
-                    timeout=30.0
-                )
+    try:
+        # Initialize Twilio client
+        twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
-                if response.status_code == 200:
-                    result = response.json()
-                    db_message.whatsapp_message_id = result.get("message_id")
-                    db_message.status = "sent"
-                    db_message.sent_at = datetime.utcnow()
-                    send_success = True
-                else:
-                    error_message = f"WhatsApp API error: {response.text}"
-                    db_message.status = "failed"
-                    db_message.error_message = error_message
-        except Exception as e:
-            error_message = f"Failed to send: {str(e)}"
-            db_message.status = "failed"
-            db_message.error_message = error_message
-    else:
-        # No WhatsApp config - mark as sent for demo purposes
-        # In production, you'd want to handle this differently
+        # Format phone number for WhatsApp
+        recipient = message.recipient_phone
+        if not recipient.startswith('+'):
+            recipient = '+' + recipient
+
+        # Send WhatsApp message via Twilio
+        twilio_message = twilio_client.messages.create(
+            body=message.message_content,
+            from_=f'whatsapp:{TWILIO_WHATSAPP_NUMBER}',
+            to=f'whatsapp:{recipient}'
+        )
+
+        db_message.whatsapp_message_id = twilio_message.sid
         db_message.status = "sent"
         db_message.sent_at = datetime.utcnow()
+        db_message.direction = "outbound"
         send_success = True
+
+    except Exception as e:
+        error_message = f"Failed to send: {str(e)}"
+        db_message.status = "failed"
+        db_message.error_message = error_message
 
     # Deduct balance and create transaction only if sent successfully
     if send_success:
@@ -130,6 +118,7 @@ async def send_message(
         template_name=db_message.template_name,
         message_content=db_message.message_content,
         status=db_message.status,
+        direction=db_message.direction or "outbound",
         whatsapp_message_id=db_message.whatsapp_message_id,
         cost=db_message.cost,
         cost_rupees=db_message.cost / 100,
@@ -161,6 +150,7 @@ def get_message(
         template_name=message.template_name,
         message_content=message.message_content,
         status=message.status,
+        direction=message.direction or "outbound",
         whatsapp_message_id=message.whatsapp_message_id,
         cost=message.cost,
         cost_rupees=message.cost / 100,
