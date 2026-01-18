@@ -142,6 +142,7 @@ class MessageResponse(MessageBase):
     id: int
     user_id: int
     status: str
+    direction: Optional[str] = 'outbound'
     whatsapp_message_id: Optional[str] = None
     cost: int
     cost_rupees: Optional[float] = None

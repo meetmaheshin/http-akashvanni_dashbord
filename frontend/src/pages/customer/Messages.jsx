@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 import {
   MessageSquare,
   Loader2,
@@ -8,10 +9,9 @@ import {
   CheckCheck,
   Clock,
   XCircle,
-  Eye,
   Phone,
   ArrowLeft,
-  User
+  Send
 } from 'lucide-react';
 
 export default function Messages() {
@@ -20,10 +20,50 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     fetchMessages();
   }, []);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [selectedMessages]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedContact) return;
+
+    setSending(true);
+    try {
+      const res = await api.post('/customer/send-message', {
+        recipient_phone: selectedContact,
+        message_content: newMessage.trim(),
+        message_type: 'session'
+      });
+
+      // Add new message to list
+      setMessages(prev => [...prev, res.data]);
+      setNewMessage('');
+      toast.success('Message sent!');
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error(error.response?.data?.detail || 'Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
 
   const fetchMessages = async () => {
     try {
@@ -341,58 +381,105 @@ export default function Messages() {
 
                       {/* Messages for this date */}
                       <div className="space-y-2">
-                        {group.messages.map((msg) => (
-                          <div key={msg.id} className="flex justify-end">
-                            <div
-                              className={`max-w-[75%] rounded-lg p-3 shadow-sm ${
-                                msg.status === 'failed'
-                                  ? 'bg-red-100 border border-red-200'
-                                  : 'bg-green-100'
-                              }`}
-                            >
-                              {/* Template Badge */}
-                              {msg.template_name && (
-                                <div className="text-xs text-green-700 font-medium mb-1 flex items-center gap-1">
-                                  <MessageSquare className="h-3 w-3" />
-                                  {msg.template_name}
-                                </div>
-                              )}
+                        {group.messages.map((msg) => {
+                          // Determine if message is outbound (sent by us) or inbound (received)
+                          const isOutbound = msg.direction !== 'inbound';
 
-                              {/* Message Content */}
-                              <p className="text-gray-800 text-sm whitespace-pre-wrap">
-                                {msg.message_content || 'Template message sent'}
-                              </p>
+                          return (
+                            <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className={`max-w-[75%] rounded-lg p-3 shadow-sm ${
+                                  msg.status === 'failed'
+                                    ? 'bg-red-100 border border-red-200'
+                                    : isOutbound
+                                    ? 'bg-green-100 rounded-tr-none'
+                                    : 'bg-white rounded-tl-none border'
+                                }`}
+                              >
+                                {/* Template Badge */}
+                                {msg.template_name && (
+                                  <div className="text-xs text-green-700 font-medium mb-1 flex items-center gap-1">
+                                    <MessageSquare className="h-3 w-3" />
+                                    {msg.template_name}
+                                  </div>
+                                )}
 
-                              {/* Error Message */}
-                              {msg.error_message && (
-                                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                                  <XCircle className="h-3 w-3" />
-                                  {msg.error_message}
+                                {/* Message Content */}
+                                <p className="text-gray-800 text-sm whitespace-pre-wrap">
+                                  {msg.message_content || 'Template message sent'}
                                 </p>
-                              )}
 
-                              {/* Footer */}
-                              <div className="flex items-center justify-end gap-2 mt-1">
-                                <span className="text-xs text-gray-500">
-                                  ₹{msg.cost_rupees?.toFixed(2)}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(msg.created_at).toLocaleTimeString('en-IN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                                <span className={getStatusColor(msg.status)}>
-                                  {getStatusIcon(msg.status)}
-                                </span>
+                                {/* Error Message */}
+                                {msg.error_message && (
+                                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                                    <XCircle className="h-3 w-3" />
+                                    {msg.error_message}
+                                  </p>
+                                )}
+
+                                {/* Footer */}
+                                <div className={`flex items-center gap-2 mt-1 ${isOutbound ? 'justify-end' : 'justify-start'}`}>
+                                  {msg.cost_rupees > 0 && (
+                                    <span className="text-xs text-gray-500">
+                                      ₹{msg.cost_rupees?.toFixed(2)}
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(msg.created_at).toLocaleTimeString('en-IN', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                  {isOutbound && (
+                                    <span className={getStatusColor(msg.status)}>
+                                      {getStatusIcon(msg.status)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input Box */}
+              <div className="p-3 border-t bg-gray-50">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 bg-white rounded-lg border focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-500">
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      placeholder="Type a message..."
+                      rows={1}
+                      className="w-full px-4 py-3 text-sm resize-none focus:outline-none rounded-lg"
+                      style={{ maxHeight: '120px' }}
+                    />
+                  </div>
+                  <button
+                    onClick={sendMessage}
+                    disabled={sending || !newMessage.trim()}
+                    className={`p-3 rounded-full transition-colors ${
+                      sending || !newMessage.trim()
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}
+                  >
+                    {sending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Messages are sent via WhatsApp Business API
+                </p>
               </div>
             </>
           ) : (

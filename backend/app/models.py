@@ -159,6 +159,7 @@ class Message(Base):
     message_type = Column(String(20), nullable=False)  # template/session
     template_name = Column(String(255))  # For template messages
     message_content = Column(Text)
+    direction = Column(String(20), default='outbound')  # outbound/inbound
 
     # Status tracking
     status = Column(String(20), default=MessageStatus.PENDING)

@@ -475,6 +475,7 @@ def import_messages_csv(
                 message_type='session',
                 template_name=None,
                 message_content=body,
+                direction=direction if direction in ['inbound', 'outbound'] else 'outbound',
                 status=mapped_status,
                 whatsapp_message_id=message_sid if message_sid else None,
                 cost=msg_cost,
@@ -496,7 +497,6 @@ def import_messages_csv(
                 user_id=user_id,
                 type="debit",
                 amount=total_cost,
-                balance_after=user.balance,
                 description=f"WhatsApp Messages: {imported_count} sent",
                 status="completed"
             )
