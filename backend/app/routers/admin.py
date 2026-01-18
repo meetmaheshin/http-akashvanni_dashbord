@@ -383,6 +383,7 @@ def delete_api_config(
 def import_messages_csv(
     user_id: int,
     file: UploadFile = File(...),
+    deduct_balance: bool = Query(True, description="Deduct balance for imported messages"),
     admin: models.User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -395,6 +396,12 @@ def import_messages_csv(
     if not user:
         raise HTTPException(status_code=404, detail="Customer not found")
 
+    # Get message pricing (session message price)
+    pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "session"
+    ).first()
+    message_cost = pricing.price if pricing else 100  # Default 100 paise = ₹1
+
     # Read and parse CSV
     try:
         contents = file.file.read().decode('utf-8')
@@ -402,6 +409,7 @@ def import_messages_csv(
 
         imported_count = 0
         skipped_count = 0
+        total_cost = 0
 
         for row in csv_reader:
             # Check if message already exists (by whatsapp_message_id)
@@ -421,6 +429,9 @@ def import_messages_csv(
             body = row.get('Body', '')
             status = row.get('Status', 'sent')
             date_sent = row.get('DateSent', '')
+
+            # Only charge for outbound messages
+            is_outbound = direction != 'inbound'
 
             # Determine recipient phone based on direction
             if direction == 'inbound':
@@ -452,6 +463,10 @@ def import_messages_csv(
             }
             mapped_status = status_map.get(status.lower(), 'sent')
 
+            # Calculate cost for this message (only outbound, non-failed)
+            msg_cost = message_cost if (is_outbound and mapped_status != 'failed' and deduct_balance) else 0
+            total_cost += msg_cost
+
             # Create message record
             message = models.Message(
                 user_id=user_id,
@@ -462,7 +477,7 @@ def import_messages_csv(
                 message_content=body,
                 status=mapped_status,
                 whatsapp_message_id=message_sid if message_sid else None,
-                cost=0,
+                cost=msg_cost,
                 created_at=created_at,
                 sent_at=sent_at,
                 delivered_at=created_at if mapped_status == 'delivered' else None,
@@ -472,13 +487,33 @@ def import_messages_csv(
             db.add(message)
             imported_count += 1
 
+        # Deduct balance from user if enabled and there's a cost
+        if deduct_balance and total_cost > 0:
+            user.balance -= total_cost
+
+            # Create a single transaction for the batch import
+            transaction = models.Transaction(
+                user_id=user_id,
+                type="debit",
+                amount=total_cost,
+                balance_after=user.balance,
+                description=f"CSV Import: {imported_count} messages",
+                status="completed"
+            )
+            db.add(transaction)
+
         db.commit()
 
         return {
             "message": "CSV import completed",
             "imported": imported_count,
             "skipped": skipped_count,
-            "user_id": user_id
+            "user_id": user_id,
+            "total_cost_paise": total_cost,
+            "total_cost_rupees": total_cost / 100,
+            "balance_deducted": deduct_balance and total_cost > 0,
+            "new_balance_paise": user.balance,
+            "new_balance_rupees": user.balance / 100
         }
 
     except Exception as e:
