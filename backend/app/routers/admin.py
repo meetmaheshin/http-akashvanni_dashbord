@@ -497,7 +497,7 @@ def import_messages_csv(
                 type="debit",
                 amount=total_cost,
                 balance_after=user.balance,
-                description=f"CSV Import: {imported_count} messages",
+                description=f"WhatsApp Messages: {imported_count} sent",
                 status="completed"
             )
             db.add(transaction)
