@@ -226,3 +226,16 @@ class CompanyConfig(Base):
     invoice_prefix = Column(String(10), default="TZ")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+# Phone Number to Customer Mapping (for Twilio sync)
+class PhoneMapping(Base):
+    __tablename__ = "phone_mappings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    phone_number = Column(String(20), unique=True, nullable=False, index=True)  # e.g., +916355060488
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationship
+    user = relationship("User")

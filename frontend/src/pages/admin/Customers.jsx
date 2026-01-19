@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import {
   Users,
   Loader2,
@@ -9,8 +11,7 @@ import {
   Edit,
   X,
   Check,
-  Minus,
-  Plus
+  LogIn
 } from 'lucide-react';
 
 export default function Customers() {
@@ -21,6 +22,9 @@ export default function Customers() {
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [impersonating, setImpersonating] = useState(null);
+  const navigate = useNavigate();
+  const { setImpersonationMode } = useAuth();
 
   useEffect(() => {
     fetchCustomers();
@@ -67,6 +71,36 @@ export default function Customers() {
       fetchCustomers();
     } catch (error) {
       toast.error('Failed to update balance');
+    }
+  };
+
+  const handleViewAsCustomer = async (customer) => {
+    setImpersonating(customer.id);
+    try {
+      const res = await api.post(`/admin/impersonate/${customer.id}`);
+
+      // Store admin token for later
+      const adminToken = localStorage.getItem('token');
+      localStorage.setItem('admin_token', adminToken);
+
+      // Set new token
+      localStorage.setItem('token', res.data.access_token);
+
+      // Set impersonation mode in context
+      if (setImpersonationMode) {
+        setImpersonationMode(true, customer.name, res.data.impersonated_by);
+      }
+
+      toast.success(`Viewing as ${customer.name}`);
+
+      // Redirect to customer dashboard
+      navigate('/dashboard');
+      window.location.reload(); // Reload to apply new token
+    } catch (error) {
+      console.error('Failed to impersonate:', error);
+      toast.error(error.response?.data?.detail || 'Failed to view as customer');
+    } finally {
+      setImpersonating(null);
     }
   };
 
@@ -158,6 +192,18 @@ export default function Customers() {
                     </td>
                     <td className="py-4">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleViewAsCustomer(customer)}
+                          disabled={impersonating === customer.id}
+                          className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="View as customer"
+                        >
+                          {impersonating === customer.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedCustomer(customer);

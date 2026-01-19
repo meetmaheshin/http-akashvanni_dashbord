@@ -7,7 +7,8 @@ import {
   FileSpreadsheet,
   CheckCircle,
   AlertCircle,
-  Users
+  Users,
+  Info
 } from 'lucide-react';
 
 export default function ImportMessages() {
@@ -17,7 +18,6 @@ export default function ImportMessages() {
   const [loading, setLoading] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [result, setResult] = useState(null);
-  const [messageType, setMessageType] = useState('template'); // template or session
   const [deductBalance, setDeductBalance] = useState(true);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function ImportMessages() {
       formData.append('file', file);
 
       const res = await api.post(
-        `/admin/import-messages/${selectedUserId}?message_type=${messageType}&deduct_balance=${deductBalance}`,
+        `/admin/import-messages/${selectedUserId}?deduct_balance=${deductBalance}`,
         formData,
         {
           headers: {
@@ -79,6 +79,8 @@ export default function ImportMessages() {
         success: true,
         imported: res.data.imported,
         skipped: res.data.skipped,
+        templateCount: res.data.template_count,
+        sessionCount: res.data.session_count,
         totalCost: res.data.total_cost_rupees,
         balanceDeducted: res.data.balance_deducted,
       });
@@ -152,36 +154,24 @@ export default function ImportMessages() {
           </div>
         )}
 
-        {/* Message Type Selection */}
-        <div className="mb-6">
-          <label className="label">Message Type & Pricing</label>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => setMessageType('template')}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${
-                messageType === 'template'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-medium text-gray-900">Template Message</div>
-              <div className="text-2xl font-bold text-blue-600 mt-1">₹2.00</div>
-              <div className="text-xs text-gray-500 mt-1">Per message</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMessageType('session')}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${
-                messageType === 'session'
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-medium text-gray-900">Session Message</div>
-              <div className="text-2xl font-bold text-green-600 mt-1">₹1.00</div>
-              <div className="text-xs text-gray-500 mt-1">Per message (reply within 24h)</div>
-            </button>
+        {/* Pricing Info */}
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-medium text-amber-800">Pricing from CSV</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Message pricing is determined by the <code className="bg-amber-100 px-1 rounded">Type</code> column in your CSV:
+              </p>
+              <div className="flex gap-4 mt-2">
+                <div className="text-sm">
+                  <span className="font-medium text-blue-700">template</span> = ₹2.00
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium text-green-700">session</span> = ₹1.00
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -247,21 +237,33 @@ export default function ImportMessages() {
             <li><code className="bg-gray-200 px-1 rounded">Body</code> - Message content</li>
             <li><code className="bg-gray-200 px-1 rounded">Status</code> - sent/delivered/read/failed</li>
             <li><code className="bg-gray-200 px-1 rounded">DateSent</code> - Timestamp</li>
+            <li>
+              <code className="bg-blue-100 text-blue-800 px-1 rounded font-medium">Type</code> -
+              <span className="text-blue-700 font-medium"> template</span> (₹2) or
+              <span className="text-green-700 font-medium"> session</span> (₹1)
+            </li>
           </ul>
         </div>
 
         {/* Result Display */}
         {result && (
           <div className={`mb-6 p-4 rounded-lg ${result.success ? 'bg-green-50' : 'bg-red-50'}`}>
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               {result.success ? (
                 <>
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                  <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
                   <div>
                     <p className="font-medium text-green-800">Import Successful</p>
                     <p className="text-sm text-green-600">
                       {result.imported} messages imported, {result.skipped} skipped (duplicates)
                     </p>
+                    {(result.templateCount > 0 || result.sessionCount > 0) && (
+                      <p className="text-sm text-green-600 mt-1">
+                        {result.templateCount > 0 && <span className="text-blue-700">{result.templateCount} template (₹2 each)</span>}
+                        {result.templateCount > 0 && result.sessionCount > 0 && ' + '}
+                        {result.sessionCount > 0 && <span className="text-green-700">{result.sessionCount} session (₹1 each)</span>}
+                      </p>
+                    )}
                     {result.balanceDeducted && (
                       <p className="text-sm text-green-700 font-medium mt-1">
                         ₹{result.totalCost?.toFixed(2)} deducted from customer balance

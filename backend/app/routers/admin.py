@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
 import csv
@@ -10,6 +10,11 @@ import os
 from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_admin
+
+# Twilio configuration
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
 
 
 class WhatsAppConfigUpdate(BaseModel):
@@ -97,6 +102,54 @@ def get_customer(
         raise HTTPException(status_code=404, detail="Customer not found")
 
     return user
+
+
+@router.post("/impersonate/{user_id}")
+def impersonate_customer(
+    user_id: int,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a token to view the dashboard as a customer.
+    This allows admin to see exactly what the customer sees.
+    """
+    from ..auth import create_access_token
+    from datetime import timedelta
+
+    # Verify customer exists
+    customer = db.query(models.User).filter(
+        models.User.id == user_id,
+        models.User.role == "customer"
+    ).first()
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    # Create a special token with impersonation flag
+    # Token expires in 1 hour for security
+    access_token = create_access_token(
+        data={
+            "sub": customer.email,
+            "impersonated_by": admin.email,
+            "is_impersonation": True
+        },
+        expires_delta=timedelta(hours=1)
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "customer": {
+            "id": customer.id,
+            "name": customer.name,
+            "email": customer.email,
+            "balance": customer.balance,
+            "balance_rupees": customer.balance / 100
+        },
+        "impersonated_by": admin.email,
+        "message": f"You are now viewing as {customer.name}"
+    }
 
 @router.put("/customers/{user_id}")
 def update_customer(
@@ -384,10 +437,14 @@ def import_messages_csv(
     user_id: int,
     file: UploadFile = File(...),
     deduct_balance: bool = Query(True, description="Deduct balance for imported messages"),
-    message_type: str = Query("template", description="Message type: template (₹2) or session (₹1)"),
     admin: models.User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Import messages from CSV. The CSV should have a 'Type' column with values 'template' or 'session'.
+    - template messages: ₹2.00 each
+    - session messages: ₹1.00 each
+    """
     # Verify customer exists
     user = db.query(models.User).filter(
         models.User.id == user_id,
@@ -397,17 +454,17 @@ def import_messages_csv(
     if not user:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    # Get message pricing based on message_type parameter
-    msg_type = message_type if message_type in ["template", "session"] else "template"
-    pricing = db.query(models.PricingConfig).filter(
-        models.PricingConfig.message_type == msg_type
+    # Get pricing from database
+    template_pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "template"
+    ).first()
+    session_pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "session"
     ).first()
 
     # Default prices: template = ₹2 (200 paise), session = ₹1 (100 paise)
-    if pricing:
-        message_cost = pricing.price
-    else:
-        message_cost = 200 if msg_type == "template" else 100
+    template_cost = template_pricing.price if template_pricing else 200
+    session_cost = session_pricing.price if session_pricing else 100
 
     # Read and parse CSV
     try:
@@ -417,6 +474,8 @@ def import_messages_csv(
         imported_count = 0
         skipped_count = 0
         total_cost = 0
+        template_count = 0
+        session_count = 0
 
         for row in csv_reader:
             # Check if message already exists (by whatsapp_message_id)
@@ -428,6 +487,18 @@ def import_messages_csv(
                 if existing:
                     skipped_count += 1
                     continue
+
+            # Get message type from CSV 'Type' column (default to 'template' if not specified)
+            csv_msg_type = row.get('Type', '').strip().lower()
+            if csv_msg_type in ['session', 'reply']:
+                msg_type = 'session'
+                message_cost = session_cost
+                session_count += 1
+            else:
+                # Default to template for 'template', empty, or any other value
+                msg_type = 'template'
+                message_cost = template_cost
+                template_count += 1
 
             # Parse the CSV row
             direction = row.get('Direction', 'outbound-api')
@@ -500,11 +571,16 @@ def import_messages_csv(
             user.balance -= total_cost
 
             # Create a single transaction for the batch import
+            description_parts = []
+            if template_count > 0:
+                description_parts.append(f"{template_count} template")
+            if session_count > 0:
+                description_parts.append(f"{session_count} session")
             transaction = models.Transaction(
                 user_id=user_id,
                 type="debit",
                 amount=total_cost,
-                description=f"WhatsApp Messages: {imported_count} sent",
+                description=f"WhatsApp Messages: {' + '.join(description_parts)}",
                 status="completed"
             )
             db.add(transaction)
@@ -515,6 +591,8 @@ def import_messages_csv(
             "message": "CSV import completed",
             "imported": imported_count,
             "skipped": skipped_count,
+            "template_count": template_count,
+            "session_count": session_count,
             "user_id": user_id,
             "total_cost_paise": total_cost,
             "total_cost_rupees": total_cost / 100,
@@ -680,3 +758,284 @@ def get_whatsapp_customers(
         }
         for c in customers
     ]
+
+
+# ========== Twilio Sync Endpoints ==========
+
+class PhoneMappingCreate(BaseModel):
+    phone_number: str  # Twilio sender phone number (e.g., +916355060488)
+    user_id: int  # Customer ID to map to
+
+class PhoneMappingResponse(BaseModel):
+    id: int
+    phone_number: str
+    user_id: int
+    user_name: str
+    user_email: str
+    created_at: datetime
+
+
+@router.get("/phone-mappings")
+def get_phone_mappings(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all phone number to customer mappings"""
+    mappings = db.query(models.PhoneMapping).all()
+
+    result = []
+    for m in mappings:
+        user = db.query(models.User).filter(models.User.id == m.user_id).first()
+        result.append({
+            "id": m.id,
+            "phone_number": m.phone_number,
+            "user_id": m.user_id,
+            "user_name": user.name if user else "Unknown",
+            "user_email": user.email if user else "Unknown",
+            "created_at": m.created_at
+        })
+
+    return result
+
+
+@router.post("/phone-mappings")
+def create_phone_mapping(
+    mapping: PhoneMappingCreate,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a phone number to customer mapping"""
+    # Check if mapping already exists
+    existing = db.query(models.PhoneMapping).filter(
+        models.PhoneMapping.phone_number == mapping.phone_number
+    ).first()
+
+    if existing:
+        # Update existing mapping
+        existing.user_id = mapping.user_id
+        db.commit()
+        return {"message": "Phone mapping updated", "id": existing.id}
+
+    # Verify user exists
+    user = db.query(models.User).filter(
+        models.User.id == mapping.user_id,
+        models.User.role == "customer"
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    # Create new mapping
+    new_mapping = models.PhoneMapping(
+        phone_number=mapping.phone_number,
+        user_id=mapping.user_id
+    )
+    db.add(new_mapping)
+    db.commit()
+    db.refresh(new_mapping)
+
+    return {"message": "Phone mapping created", "id": new_mapping.id}
+
+
+@router.delete("/phone-mappings/{mapping_id}")
+def delete_phone_mapping(
+    mapping_id: int,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a phone number mapping"""
+    mapping = db.query(models.PhoneMapping).filter(
+        models.PhoneMapping.id == mapping_id
+    ).first()
+
+    if not mapping:
+        raise HTTPException(status_code=404, detail="Mapping not found")
+
+    db.delete(mapping)
+    db.commit()
+
+    return {"message": "Mapping deleted"}
+
+
+@router.post("/sync-twilio-messages")
+def sync_twilio_messages(
+    days_back: int = Query(7, description="Number of days to sync"),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Sync messages from Twilio API.
+    Maps messages to customers based on phone number mappings.
+    """
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+
+    try:
+        from twilio.rest import Client as TwilioClient
+        client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Twilio SDK not installed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initialize Twilio client: {str(e)}")
+
+    # Get all phone mappings
+    mappings = db.query(models.PhoneMapping).all()
+    phone_to_user = {m.phone_number: m.user_id for m in mappings}
+
+    if not phone_to_user:
+        raise HTTPException(status_code=400, detail="No phone mappings configured. Please add phone to customer mappings first.")
+
+    # Get pricing
+    template_pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "template"
+    ).first()
+    session_pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "session"
+    ).first()
+
+    template_cost = template_pricing.price if template_pricing else 200
+    session_cost = session_pricing.price if session_pricing else 100
+
+    # Calculate date range
+    date_from = datetime.utcnow() - timedelta(days=days_back)
+
+    # Fetch messages from Twilio
+    try:
+        twilio_messages = client.messages.list(
+            date_sent_after=date_from,
+            limit=1000
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Twilio messages: {str(e)}")
+
+    imported_count = 0
+    skipped_count = 0
+    no_mapping_count = 0
+    user_stats = {}  # Track per-user stats
+
+    for msg in twilio_messages:
+        # Skip if already exists
+        if msg.sid:
+            existing = db.query(models.Message).filter(
+                models.Message.whatsapp_message_id == msg.sid
+            ).first()
+            if existing:
+                skipped_count += 1
+                continue
+
+        # Determine sender/recipient and find user
+        from_number = msg.from_.replace('whatsapp:', '') if msg.from_ else ''
+        to_number = msg.to.replace('whatsapp:', '') if msg.to else ''
+
+        # Check direction
+        is_outbound = msg.direction and 'outbound' in msg.direction.lower()
+
+        # Find user based on from number (for outbound) or to number (for inbound)
+        user_id = None
+        if is_outbound:
+            user_id = phone_to_user.get(from_number)
+        else:
+            user_id = phone_to_user.get(to_number)
+
+        if not user_id:
+            no_mapping_count += 1
+            continue
+
+        # Determine message type (default to template for outbound, session for inbound)
+        if is_outbound:
+            msg_type = 'template'
+            message_cost = template_cost
+        else:
+            msg_type = 'session'
+            message_cost = 0  # Don't charge for inbound
+
+        # Determine recipient phone
+        recipient_phone = to_number if is_outbound else from_number
+
+        # Map status
+        status_map = {
+            'delivered': 'delivered',
+            'sent': 'sent',
+            'read': 'read',
+            'failed': 'failed',
+            'undelivered': 'failed',
+            'received': 'delivered',
+            'queued': 'pending',
+            'sending': 'pending'
+        }
+        mapped_status = status_map.get(msg.status.lower() if msg.status else 'sent', 'sent')
+
+        # Calculate cost (only for outbound, non-failed)
+        msg_cost = message_cost if (is_outbound and mapped_status != 'failed') else 0
+
+        # Create message record
+        message = models.Message(
+            user_id=user_id,
+            recipient_phone=recipient_phone,
+            recipient_name=None,
+            message_type=msg_type,
+            template_name=f"Twilio Sync - {msg_type}" if msg_type == "template" else None,
+            message_content=msg.body or '',
+            direction='outbound' if is_outbound else 'inbound',
+            status=mapped_status,
+            whatsapp_message_id=msg.sid,
+            cost=msg_cost,
+            created_at=msg.date_sent or datetime.utcnow(),
+            sent_at=msg.date_sent,
+            delivered_at=msg.date_sent if mapped_status == 'delivered' else None,
+            read_at=msg.date_sent if mapped_status == 'read' else None,
+            error_message=msg.error_message if hasattr(msg, 'error_message') else None
+        )
+        db.add(message)
+        imported_count += 1
+
+        # Track user stats
+        if user_id not in user_stats:
+            user_stats[user_id] = {'count': 0, 'cost': 0, 'template': 0, 'session': 0}
+        user_stats[user_id]['count'] += 1
+        user_stats[user_id]['cost'] += msg_cost
+        if msg_type == 'template':
+            user_stats[user_id]['template'] += 1
+        else:
+            user_stats[user_id]['session'] += 1
+
+    # Deduct balance for each user
+    for user_id, stats in user_stats.items():
+        if stats['cost'] > 0:
+            user = db.query(models.User).filter(models.User.id == user_id).first()
+            if user:
+                user.balance -= stats['cost']
+
+                # Create transaction
+                description_parts = []
+                if stats['template'] > 0:
+                    description_parts.append(f"{stats['template']} template")
+                if stats['session'] > 0:
+                    description_parts.append(f"{stats['session']} session")
+
+                transaction = models.Transaction(
+                    user_id=user_id,
+                    type="debit",
+                    amount=stats['cost'],
+                    description=f"Twilio Sync: {' + '.join(description_parts)}",
+                    status="completed"
+                )
+                db.add(transaction)
+
+    db.commit()
+
+    return {
+        "message": "Twilio sync completed",
+        "imported": imported_count,
+        "skipped": skipped_count,
+        "no_mapping": no_mapping_count,
+        "user_stats": {
+            str(uid): {
+                "messages": s['count'],
+                "cost_rupees": s['cost'] / 100,
+                "template": s['template'],
+                "session": s['session']
+            }
+            for uid, s in user_stats.items()
+        }
+    }

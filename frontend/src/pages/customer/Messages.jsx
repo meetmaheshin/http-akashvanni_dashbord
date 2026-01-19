@@ -28,13 +28,6 @@ export default function Messages() {
     fetchMessages();
   }, []);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [selectedMessages]);
-
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedContact) return;
 
@@ -76,11 +69,20 @@ export default function Messages() {
     }
   };
 
-  // Group messages by contact (phone number)
+  // Group messages by contact (phone number) and remove duplicates
   const contacts = useMemo(() => {
     const contactMap = new Map();
+    const seenMessageIds = new Set(); // Track seen whatsapp_message_ids to filter duplicates
 
     messages.forEach((msg) => {
+      // Skip duplicate messages based on whatsapp_message_id
+      if (msg.whatsapp_message_id) {
+        if (seenMessageIds.has(msg.whatsapp_message_id)) {
+          return; // Skip this duplicate
+        }
+        seenMessageIds.add(msg.whatsapp_message_id);
+      }
+
       const phone = msg.recipient_phone;
       if (!contactMap.has(phone)) {
         contactMap.set(phone, {
@@ -100,7 +102,7 @@ export default function Messages() {
       }
     });
 
-    // Sort messages within each contact by date
+    // Sort messages within each contact by date (oldest first, so newest appears at bottom)
     contactMap.forEach((contact) => {
       contact.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     });
@@ -131,6 +133,16 @@ export default function Messages() {
     if (filter === 'all') return contact.messages;
     return contact.messages.filter((msg) => msg.status === filter);
   }, [selectedContact, contacts, filter]);
+
+  // Scroll to bottom when messages change or contact is selected
+  useEffect(() => {
+    if (messagesEndRef.current && selectedMessages.length > 0) {
+      // Use setTimeout to ensure DOM has updated before scrolling
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 100);
+    }
+  }, [selectedMessages, selectedContact]);
 
   const getStatusIcon = (status) => {
     switch (status) {

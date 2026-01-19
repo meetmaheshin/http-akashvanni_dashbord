@@ -20,6 +20,7 @@ import AdminTransactions from './pages/admin/AdminTransactions';
 import AdminMessages from './pages/admin/AdminMessages';
 import ImportMessages from './pages/admin/ImportMessages';
 import WhatsAppSettings from './pages/admin/WhatsAppSettings';
+import TwilioSync from './pages/admin/TwilioSync';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -203,6 +204,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <WhatsAppSettings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/twilio-sync"
+        element={
+          <ProtectedRoute adminOnly>
+            <TwilioSync />
           </ProtectedRoute>
         }
       />

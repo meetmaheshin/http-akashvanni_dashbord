@@ -6,10 +6,18 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonatedCustomer, setImpersonatedCustomer] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
+    const adminToken = localStorage.getItem('admin_token');
+
+    // Check if we're in impersonation mode
+    if (adminToken && token && adminToken !== token) {
+      setIsImpersonating(true);
+    }
 
     if (token && savedUser) {
       setUser(JSON.parse(savedUser));
@@ -18,6 +26,10 @@ export const AuthProvider = ({ children }) => {
         .then(res => {
           setUser(res.data);
           localStorage.setItem('user', JSON.stringify(res.data));
+          if (adminToken && res.data.role === 'customer') {
+            setIsImpersonating(true);
+            setImpersonatedCustomer(res.data.name);
+          }
         })
         .catch(() => {
           logout();
@@ -49,7 +61,10 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
     setUser(null);
+    setIsImpersonating(false);
+    setImpersonatedCustomer(null);
   };
 
   const refreshUser = async () => {
@@ -63,8 +78,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setImpersonationMode = (isImpersonating, customerName, adminEmail) => {
+    setIsImpersonating(isImpersonating);
+    setImpersonatedCustomer(customerName);
+  };
+
+  const exitImpersonation = () => {
+    const adminToken = localStorage.getItem('admin_token');
+    if (adminToken) {
+      localStorage.setItem('token', adminToken);
+      localStorage.removeItem('admin_token');
+      setIsImpersonating(false);
+      setImpersonatedCustomer(null);
+      window.location.href = '/admin/customers';
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, refreshUser }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      register,
+      logout,
+      loading,
+      refreshUser,
+      isImpersonating,
+      impersonatedCustomer,
+      setImpersonationMode,
+      exitImpersonation
+    }}>
       {children}
     </AuthContext.Provider>
   );

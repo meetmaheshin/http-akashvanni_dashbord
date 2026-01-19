@@ -5,7 +5,6 @@ import {
   MessageSquare,
   CreditCard,
   History,
-  Settings,
   LogOut,
   Menu,
   X,
@@ -15,7 +14,9 @@ import {
   User,
   FileText,
   Upload,
-  Smartphone
+  Smartphone,
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -35,13 +36,14 @@ const adminNavItems = [
   { name: 'Transactions', path: '/admin/transactions', icon: History },
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
   { name: 'Import CSV', path: '/admin/import', icon: Upload },
+  { name: 'Twilio Sync', path: '/admin/twilio-sync', icon: RefreshCw },
   { name: 'Pricing', path: '/admin/pricing', icon: DollarSign },
   { name: 'WhatsApp API', path: '/admin/whatsapp', icon: Smartphone },
   { name: 'Settings', path: '/admin/settings', icon: Cog },
 ];
 
 export default function Layout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isImpersonating, impersonatedCustomer, exitImpersonation } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -132,6 +134,24 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <div className="lg:pl-64">
+        {/* Impersonation Banner */}
+        {isImpersonating && (
+          <div className="bg-purple-600 text-white px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              <span className="text-sm">
+                Viewing as <strong>{impersonatedCustomer || user?.name}</strong> (Admin Mode)
+              </span>
+            </div>
+            <button
+              onClick={exitImpersonation}
+              className="bg-white text-purple-600 px-3 py-1 rounded text-sm font-medium hover:bg-purple-50 transition-colors"
+            >
+              Back to Admin
+            </button>
+          </div>
+        )}
+
         {/* Top bar */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
           <div className="flex items-center justify-between px-4 py-3">
