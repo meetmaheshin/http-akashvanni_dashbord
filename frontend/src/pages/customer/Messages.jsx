@@ -25,8 +25,24 @@ export default function Messages() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    fetchMessages();
+    // Auto-sync from Twilio first, then fetch messages
+    syncAndFetchMessages();
   }, []);
+
+  const syncAndFetchMessages = async () => {
+    try {
+      // First, sync new messages from Twilio (runs silently in background)
+      await api.post('/customer/sync-messages').catch(() => {
+        // Silently ignore sync errors - Twilio may not be configured
+      });
+
+      // Then fetch all messages from database
+      await fetchMessages();
+    } catch (error) {
+      console.error('Failed to sync/fetch messages:', error);
+      setLoading(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedContact) return;

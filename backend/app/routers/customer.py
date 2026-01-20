@@ -266,6 +266,152 @@ def get_pricing(db: Session = Depends(get_db)):
         session_price_rupees=session_price / 100
     )
 
+@router.post("/sync-messages")
+def sync_customer_messages(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Auto-sync messages from Twilio for the current customer.
+    This runs automatically when customer opens Messages page.
+    """
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        # Twilio not configured, silently return
+        return {"synced": 0, "message": "Twilio not configured"}
+
+    # Find phone mapping for this user
+    mapping = db.query(models.PhoneMapping).filter(
+        models.PhoneMapping.user_id == current_user.id
+    ).first()
+
+    if not mapping:
+        # No mapping for this user, silently return
+        return {"synced": 0, "message": "No phone mapping configured"}
+
+    try:
+        twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    except Exception as e:
+        return {"synced": 0, "message": f"Twilio client error: {str(e)}"}
+
+    # Get pricing
+    template_pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "template"
+    ).first()
+    session_pricing = db.query(models.PricingConfig).filter(
+        models.PricingConfig.message_type == "session"
+    ).first()
+
+    template_cost = template_pricing.price if template_pricing else 200
+    session_cost = session_pricing.price if session_pricing else 100
+
+    # Sync last 3 days by default for auto-sync
+    date_from = datetime.utcnow() - timedelta(days=3)
+
+    try:
+        # Fetch messages involving this phone number
+        twilio_messages = twilio_client.messages.list(
+            date_sent_after=date_from,
+            limit=500
+        )
+    except Exception as e:
+        return {"synced": 0, "message": f"Failed to fetch: {str(e)}"}
+
+    imported_count = 0
+    total_cost = 0
+    user_phone = mapping.phone_number
+
+    for msg in twilio_messages:
+        # Check if this message involves the user's mapped phone
+        from_number = msg.from_.replace('whatsapp:', '') if msg.from_ else ''
+        to_number = msg.to.replace('whatsapp:', '') if msg.to else ''
+
+        # Only process messages to/from this user's phone
+        if from_number != user_phone and to_number != user_phone:
+            continue
+
+        # Skip if already exists
+        if msg.sid:
+            existing = db.query(models.Message).filter(
+                models.Message.whatsapp_message_id == msg.sid
+            ).first()
+            if existing:
+                continue
+
+        # Determine direction
+        is_outbound = from_number == user_phone
+
+        # Message type and cost
+        if is_outbound:
+            msg_type = 'template'
+            message_cost = template_cost
+        else:
+            msg_type = 'session'
+            message_cost = 0  # Don't charge for inbound
+
+        # Recipient phone
+        recipient_phone = to_number if is_outbound else from_number
+
+        # Map status
+        status_map = {
+            'delivered': 'delivered',
+            'sent': 'sent',
+            'read': 'read',
+            'failed': 'failed',
+            'undelivered': 'failed',
+            'received': 'delivered',
+            'queued': 'pending',
+            'sending': 'pending'
+        }
+        mapped_status = status_map.get(msg.status.lower() if msg.status else 'sent', 'sent')
+
+        # Calculate cost (only for outbound, non-failed)
+        msg_cost = message_cost if (is_outbound and mapped_status != 'failed') else 0
+        total_cost += msg_cost
+
+        # Create message record
+        message = models.Message(
+            user_id=current_user.id,
+            recipient_phone=recipient_phone,
+            recipient_name=None,
+            message_type=msg_type,
+            template_name=f"Twilio Sync" if msg_type == "template" else None,
+            message_content=msg.body or '',
+            direction='outbound' if is_outbound else 'inbound',
+            status=mapped_status,
+            whatsapp_message_id=msg.sid,
+            cost=msg_cost,
+            created_at=msg.date_sent or datetime.utcnow(),
+            sent_at=msg.date_sent,
+            delivered_at=msg.date_sent if mapped_status == 'delivered' else None,
+            read_at=msg.date_sent if mapped_status == 'read' else None,
+            error_message=msg.error_message if hasattr(msg, 'error_message') else None
+        )
+        db.add(message)
+        imported_count += 1
+
+    # Deduct balance if there's a cost
+    if total_cost > 0:
+        current_user.balance -= total_cost
+
+        transaction = models.Transaction(
+            user_id=current_user.id,
+            type="debit",
+            amount=total_cost,
+            description=f"Auto-sync: {imported_count} messages",
+            status="completed"
+        )
+        db.add(transaction)
+
+    if imported_count > 0:
+        db.commit()
+
+    return {
+        "synced": imported_count,
+        "cost_rupees": total_cost / 100,
+        "message": f"Synced {imported_count} new messages"
+    }
+
+
 @router.get("/profile", response_model=schemas.UserResponse)
 def get_profile(current_user: models.User = Depends(get_current_user)):
     """Get current user's profile details"""
