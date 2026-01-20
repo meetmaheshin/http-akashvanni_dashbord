@@ -18,35 +18,55 @@ from ..config import settings
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
-# External database webhook URL - set this in Railway environment variables
-EXTERNAL_DB_WEBHOOK_URL = os.getenv("EXTERNAL_DB_WEBHOOK_URL")
-EXTERNAL_DB_API_KEY = os.getenv("EXTERNAL_DB_API_KEY")  # Optional API key for authentication
 
-
-async def forward_payment_to_external_db(payment_data: dict):
+def save_payment_log(
+    db: Session,
+    event_type: str,
+    source: str,
+    razorpay_payment_id: str,
+    razorpay_order_id: str,
+    razorpay_signature: str = None,
+    user: models.User = None,
+    gst_calc: dict = None,
+    invoice_number: str = None,
+    invoice_id: int = None,
+    new_balance: int = None,
+    raw_data: dict = None
+):
     """
-    Forward payment data to external database via webhook/API.
-    This runs asynchronously and won't block the main payment flow.
+    Save payment data to PaymentLog table.
+    This stores all payment info for reporting/auditing.
     """
-    if not EXTERNAL_DB_WEBHOOK_URL:
-        return  # No external DB configured, skip
-
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            headers = {"Content-Type": "application/json"}
-            if EXTERNAL_DB_API_KEY:
-                headers["Authorization"] = f"Bearer {EXTERNAL_DB_API_KEY}"
-
-            response = await client.post(
-                EXTERNAL_DB_WEBHOOK_URL,
-                json=payment_data,
-                headers=headers
-            )
-            response.raise_for_status()
-            print(f"Payment data forwarded to external DB: {payment_data.get('razorpay_payment_id')}")
+        payment_log = models.PaymentLog(
+            event_type=event_type,
+            source=source,
+            razorpay_payment_id=razorpay_payment_id,
+            razorpay_order_id=razorpay_order_id,
+            razorpay_signature=razorpay_signature,
+            user_id=user.id if user else None,
+            user_email=user.email if user else None,
+            user_name=user.name if user else None,
+            user_phone=user.phone if user else None,
+            company_name=user.company_name if user else None,
+            gst_number=user.gst_number if user else None,
+            total_amount=gst_calc["total"] if gst_calc else None,
+            subtotal_amount=gst_calc["subtotal"] if gst_calc else None,
+            gst_amount=(gst_calc["cgst"] + gst_calc["sgst"]) if gst_calc else None,
+            cgst_amount=gst_calc["cgst"] if gst_calc else None,
+            sgst_amount=gst_calc["sgst"] if gst_calc else None,
+            credited_amount=gst_calc["credited"] if gst_calc else None,
+            invoice_number=invoice_number,
+            invoice_id=invoice_id,
+            new_balance=new_balance,
+            raw_data=json.dumps(raw_data) if raw_data else None
+        )
+        db.add(payment_log)
+        db.commit()
+        print(f"Payment log saved: {razorpay_payment_id}")
     except Exception as e:
-        # Log error but don't fail the main payment
-        print(f"Failed to forward payment to external DB: {str(e)}")
+        print(f"Failed to save payment log: {str(e)}")
+        # Don't fail the main payment flow
 
 # GST rate
 GST_RATE = 0.18  # 18%
@@ -267,42 +287,26 @@ async def verify_payment(
     db.commit()
     db.refresh(current_user)
 
-    # Forward payment data to external database (async, won't block response)
-    external_payment_data = {
-        "event": "payment.verified",
-        "timestamp": datetime.utcnow().isoformat(),
-        "razorpay_payment_id": payment_data.razorpay_payment_id,
-        "razorpay_order_id": payment_data.razorpay_order_id,
-        "razorpay_signature": payment_data.razorpay_signature,
-        "invoice_number": invoice_number,
-        "invoice_id": invoice.id,
-        "user": {
-            "id": current_user.id,
-            "name": current_user.name,
-            "email": current_user.email,
-            "phone": current_user.phone,
-            "company_name": current_user.company_name,
-            "gst_number": current_user.gst_number
-        },
-        "amount": {
-            "total_paise": gst_calc["total"],
-            "total_rupees": gst_calc["total"] / 100,
-            "subtotal_paise": gst_calc["subtotal"],
-            "subtotal_rupees": gst_calc["subtotal"] / 100,
-            "gst_paise": gst_calc["cgst"] + gst_calc["sgst"],
-            "gst_rupees": (gst_calc["cgst"] + gst_calc["sgst"]) / 100,
-            "cgst_paise": gst_calc["cgst"],
-            "sgst_paise": gst_calc["sgst"],
-            "credited_paise": gst_calc["credited"],
-            "credited_rupees": gst_calc["credited"] / 100
-        },
-        "new_balance_paise": current_user.balance,
-        "new_balance_rupees": current_user.balance / 100
-    }
-
-    # Fire and forget - don't wait for external DB
-    import asyncio
-    asyncio.create_task(forward_payment_to_external_db(external_payment_data))
+    # Save payment to PaymentLog table for records/auditing
+    save_payment_log(
+        db=db,
+        event_type="payment.verified",
+        source="verify_payment",
+        razorpay_payment_id=payment_data.razorpay_payment_id,
+        razorpay_order_id=payment_data.razorpay_order_id,
+        razorpay_signature=payment_data.razorpay_signature,
+        user=current_user,
+        gst_calc=gst_calc,
+        invoice_number=invoice_number,
+        invoice_id=invoice.id,
+        new_balance=current_user.balance,
+        raw_data={
+            "razorpay_payment_id": payment_data.razorpay_payment_id,
+            "razorpay_order_id": payment_data.razorpay_order_id,
+            "amount": gst_calc,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    )
 
     return {
         "status": "success",
@@ -593,15 +597,17 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     event = data.get("event")
 
-    # Forward raw Razorpay webhook data to external DB
-    import asyncio
-    webhook_data = {
-        "event": event,
-        "source": "razorpay_webhook",
-        "timestamp": datetime.utcnow().isoformat(),
-        "raw_payload": data
-    }
-    asyncio.create_task(forward_payment_to_external_db(webhook_data))
+    # Save webhook data to PaymentLog
+    if event == "payment.captured":
+        payment = data.get("payload", {}).get("payment", {}).get("entity", {})
+        save_payment_log(
+            db=db,
+            event_type=event,
+            source="razorpay_webhook",
+            razorpay_payment_id=payment.get("id"),
+            razorpay_order_id=payment.get("order_id"),
+            raw_data=data
+        )
 
     if event == "payment.captured":
         payment = data["payload"]["payment"]["entity"]

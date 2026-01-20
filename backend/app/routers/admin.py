@@ -1039,3 +1039,133 @@ def sync_twilio_messages(
             for uid, s in user_stats.items()
         }
     }
+
+
+# ========== Payment Logs Endpoints ==========
+
+@router.get("/payment-logs")
+def get_payment_logs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    user_id: int = Query(None, description="Filter by user ID"),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all payment logs for auditing/reporting"""
+    query = db.query(models.PaymentLog)
+
+    if user_id:
+        query = query.filter(models.PaymentLog.user_id == user_id)
+
+    total = query.count()
+    logs = query.order_by(models.PaymentLog.created_at.desc()).offset(skip).limit(limit).all()
+
+    return {
+        "total": total,
+        "logs": [
+            {
+                "id": log.id,
+                "event_type": log.event_type,
+                "source": log.source,
+                "razorpay_payment_id": log.razorpay_payment_id,
+                "razorpay_order_id": log.razorpay_order_id,
+                "user_id": log.user_id,
+                "user_email": log.user_email,
+                "user_name": log.user_name,
+                "user_phone": log.user_phone,
+                "company_name": log.company_name,
+                "gst_number": log.gst_number,
+                "total_amount_paise": log.total_amount,
+                "total_amount_rupees": log.total_amount / 100 if log.total_amount else None,
+                "subtotal_paise": log.subtotal_amount,
+                "gst_paise": log.gst_amount,
+                "credited_paise": log.credited_amount,
+                "credited_rupees": log.credited_amount / 100 if log.credited_amount else None,
+                "invoice_number": log.invoice_number,
+                "invoice_id": log.invoice_id,
+                "new_balance_paise": log.new_balance,
+                "new_balance_rupees": log.new_balance / 100 if log.new_balance else None,
+                "created_at": log.created_at
+            }
+            for log in logs
+        ]
+    }
+
+
+@router.get("/payment-logs/{log_id}")
+def get_payment_log_detail(
+    log_id: int,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get detailed payment log including raw data"""
+    log = db.query(models.PaymentLog).filter(models.PaymentLog.id == log_id).first()
+
+    if not log:
+        raise HTTPException(status_code=404, detail="Payment log not found")
+
+    import json
+    return {
+        "id": log.id,
+        "event_type": log.event_type,
+        "source": log.source,
+        "razorpay_payment_id": log.razorpay_payment_id,
+        "razorpay_order_id": log.razorpay_order_id,
+        "razorpay_signature": log.razorpay_signature,
+        "user": {
+            "id": log.user_id,
+            "email": log.user_email,
+            "name": log.user_name,
+            "phone": log.user_phone,
+            "company_name": log.company_name,
+            "gst_number": log.gst_number
+        },
+        "amount": {
+            "total_paise": log.total_amount,
+            "total_rupees": log.total_amount / 100 if log.total_amount else None,
+            "subtotal_paise": log.subtotal_amount,
+            "subtotal_rupees": log.subtotal_amount / 100 if log.subtotal_amount else None,
+            "gst_paise": log.gst_amount,
+            "gst_rupees": log.gst_amount / 100 if log.gst_amount else None,
+            "cgst_paise": log.cgst_amount,
+            "sgst_paise": log.sgst_amount,
+            "credited_paise": log.credited_amount,
+            "credited_rupees": log.credited_amount / 100 if log.credited_amount else None
+        },
+        "invoice_number": log.invoice_number,
+        "invoice_id": log.invoice_id,
+        "new_balance_paise": log.new_balance,
+        "new_balance_rupees": log.new_balance / 100 if log.new_balance else None,
+        "raw_data": json.loads(log.raw_data) if log.raw_data else None,
+        "created_at": log.created_at
+    }
+
+
+@router.get("/payment-logs/export/csv")
+def export_payment_logs_csv(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Export all payment logs as CSV"""
+    logs = db.query(models.PaymentLog).order_by(models.PaymentLog.created_at.desc()).all()
+
+    # Build CSV content
+    csv_lines = [
+        "ID,Event,Source,Razorpay Payment ID,Razorpay Order ID,User ID,User Email,User Name,Phone,Company,GST Number,Total (Paise),Total (Rs),Subtotal,GST,Credited,Invoice Number,New Balance,Created At"
+    ]
+
+    for log in logs:
+        csv_lines.append(
+            f"{log.id},{log.event_type},{log.source},{log.razorpay_payment_id},{log.razorpay_order_id},"
+            f"{log.user_id},{log.user_email},{log.user_name},{log.user_phone},{log.company_name},{log.gst_number},"
+            f"{log.total_amount},{log.total_amount / 100 if log.total_amount else ''},"
+            f"{log.subtotal_amount},{log.gst_amount},{log.credited_amount},"
+            f"{log.invoice_number},{log.new_balance},{log.created_at}"
+        )
+
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        content="\n".join(csv_lines),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=payment_logs.csv"}
+    )

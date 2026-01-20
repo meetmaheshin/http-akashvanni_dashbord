@@ -239,3 +239,51 @@ class PhoneMapping(Base):
 
     # Relationship
     user = relationship("User")
+
+
+# Payment Log - stores all raw payment data from Razorpay
+class PaymentLog(Base):
+    __tablename__ = "payment_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Razorpay identifiers
+    razorpay_payment_id = Column(String(100), unique=True, index=True)
+    razorpay_order_id = Column(String(100), index=True)
+    razorpay_signature = Column(String(255))
+
+    # Event info
+    event_type = Column(String(50))  # payment.verified, payment.captured, etc.
+    source = Column(String(50))  # verify_payment, webhook
+
+    # User info
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_email = Column(String(255))
+    user_name = Column(String(255))
+    user_phone = Column(String(50))
+    company_name = Column(String(255))
+    gst_number = Column(String(50))
+
+    # Amount details (all in paise)
+    total_amount = Column(Integer)
+    subtotal_amount = Column(Integer)
+    gst_amount = Column(Integer)
+    cgst_amount = Column(Integer)
+    sgst_amount = Column(Integer)
+    credited_amount = Column(Integer)
+
+    # Invoice info
+    invoice_number = Column(String(50))
+    invoice_id = Column(Integer)
+
+    # Balance after payment
+    new_balance = Column(Integer)
+
+    # Raw JSON data (stores complete Razorpay response)
+    raw_data = Column(Text)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationship
+    user = relationship("User")
