@@ -5,6 +5,9 @@ from sqlalchemy import func
 import razorpay
 import hmac
 import hashlib
+import httpx
+import os
+import json
 from datetime import datetime
 from typing import List
 from io import BytesIO
@@ -14,6 +17,36 @@ from ..auth import get_current_user
 from ..config import settings
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
+
+# External database webhook URL - set this in Railway environment variables
+EXTERNAL_DB_WEBHOOK_URL = os.getenv("EXTERNAL_DB_WEBHOOK_URL")
+EXTERNAL_DB_API_KEY = os.getenv("EXTERNAL_DB_API_KEY")  # Optional API key for authentication
+
+
+async def forward_payment_to_external_db(payment_data: dict):
+    """
+    Forward payment data to external database via webhook/API.
+    This runs asynchronously and won't block the main payment flow.
+    """
+    if not EXTERNAL_DB_WEBHOOK_URL:
+        return  # No external DB configured, skip
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            headers = {"Content-Type": "application/json"}
+            if EXTERNAL_DB_API_KEY:
+                headers["Authorization"] = f"Bearer {EXTERNAL_DB_API_KEY}"
+
+            response = await client.post(
+                EXTERNAL_DB_WEBHOOK_URL,
+                json=payment_data,
+                headers=headers
+            )
+            response.raise_for_status()
+            print(f"Payment data forwarded to external DB: {payment_data.get('razorpay_payment_id')}")
+    except Exception as e:
+        # Log error but don't fail the main payment
+        print(f"Failed to forward payment to external DB: {str(e)}")
 
 # GST rate
 GST_RATE = 0.18  # 18%
@@ -144,7 +177,7 @@ def create_order(
     )
 
 @router.post("/verify-payment")
-def verify_payment(
+async def verify_payment(
     payment_data: schemas.RazorpayPaymentVerify,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -233,6 +266,43 @@ def verify_payment(
 
     db.commit()
     db.refresh(current_user)
+
+    # Forward payment data to external database (async, won't block response)
+    external_payment_data = {
+        "event": "payment.verified",
+        "timestamp": datetime.utcnow().isoformat(),
+        "razorpay_payment_id": payment_data.razorpay_payment_id,
+        "razorpay_order_id": payment_data.razorpay_order_id,
+        "razorpay_signature": payment_data.razorpay_signature,
+        "invoice_number": invoice_number,
+        "invoice_id": invoice.id,
+        "user": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "email": current_user.email,
+            "phone": current_user.phone,
+            "company_name": current_user.company_name,
+            "gst_number": current_user.gst_number
+        },
+        "amount": {
+            "total_paise": gst_calc["total"],
+            "total_rupees": gst_calc["total"] / 100,
+            "subtotal_paise": gst_calc["subtotal"],
+            "subtotal_rupees": gst_calc["subtotal"] / 100,
+            "gst_paise": gst_calc["cgst"] + gst_calc["sgst"],
+            "gst_rupees": (gst_calc["cgst"] + gst_calc["sgst"]) / 100,
+            "cgst_paise": gst_calc["cgst"],
+            "sgst_paise": gst_calc["sgst"],
+            "credited_paise": gst_calc["credited"],
+            "credited_rupees": gst_calc["credited"] / 100
+        },
+        "new_balance_paise": current_user.balance,
+        "new_balance_rupees": current_user.balance / 100
+    }
+
+    # Fire and forget - don't wait for external DB
+    import asyncio
+    asyncio.create_task(forward_payment_to_external_db(external_payment_data))
 
     return {
         "status": "success",
@@ -522,6 +592,16 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
 
     data = await request.json()
     event = data.get("event")
+
+    # Forward raw Razorpay webhook data to external DB
+    import asyncio
+    webhook_data = {
+        "event": event,
+        "source": "razorpay_webhook",
+        "timestamp": datetime.utcnow().isoformat(),
+        "raw_payload": data
+    }
+    asyncio.create_task(forward_payment_to_external_db(webhook_data))
 
     if event == "payment.captured":
         payment = data["payload"]["payment"]["entity"]
