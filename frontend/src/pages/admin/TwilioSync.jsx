@@ -11,7 +11,10 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  Calendar
+  Calendar,
+  Key,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export default function TwilioSync() {
@@ -25,6 +28,9 @@ export default function TwilioSync() {
   // New mapping form
   const [newPhone, setNewPhone] = useState('');
   const [newUserId, setNewUserId] = useState('');
+  const [newTwilioSid, setNewTwilioSid] = useState('');
+  const [newTwilioToken, setNewTwilioToken] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [addingMapping, setAddingMapping] = useState(false);
 
   useEffect(() => {
@@ -61,13 +67,26 @@ export default function TwilioSync() {
 
     setAddingMapping(true);
     try {
-      await api.post('/admin/phone-mappings', {
+      const payload = {
         phone_number: formattedPhone,
         user_id: parseInt(newUserId)
-      });
+      };
+
+      // Add Twilio credentials if provided
+      if (newTwilioSid.trim()) {
+        payload.twilio_account_sid = newTwilioSid.trim();
+      }
+      if (newTwilioToken.trim()) {
+        payload.twilio_auth_token = newTwilioToken.trim();
+      }
+
+      await api.post('/admin/phone-mappings', payload);
       toast.success('Phone mapping added');
       setNewPhone('');
       setNewUserId('');
+      setNewTwilioSid('');
+      setNewTwilioToken('');
+      setShowAdvanced(false);
       fetchData();
     } catch (error) {
       console.error('Failed to add mapping:', error);
@@ -177,6 +196,51 @@ export default function TwilioSync() {
                   ))}
                 </select>
               </div>
+
+              {/* Advanced: Twilio Subaccount Credentials */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <Key className="h-4 w-4" />
+                  Twilio Subaccount Credentials (Optional)
+                  {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+
+                {showAdvanced && (
+                  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-xs text-amber-700 mb-3">
+                      If this customer uses their own Twilio subaccount, enter their credentials below.
+                      Leave empty to use global Twilio credentials.
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-gray-500">Twilio Account SID</label>
+                        <input
+                          type="text"
+                          value={newTwilioSid}
+                          onChange={(e) => setNewTwilioSid(e.target.value)}
+                          placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                          className="input mt-1 font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Twilio Auth Token</label>
+                        <input
+                          type="password"
+                          value={newTwilioToken}
+                          onChange={(e) => setNewTwilioToken(e.target.value)}
+                          placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                          className="input mt-1 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={handleAddMapping}
                 disabled={addingMapping || !newPhone || !newUserId}
@@ -204,8 +268,19 @@ export default function TwilioSync() {
                       <Phone className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{m.phone_number}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900">{m.phone_number}</p>
+                        {m.has_twilio_credentials && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+                            <Key className="h-3 w-3" />
+                            Subaccount
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-500">{m.user_name} ({m.user_email})</p>
+                      {m.twilio_account_sid && (
+                        <p className="text-xs text-gray-400 font-mono">SID: {m.twilio_account_sid}</p>
+                      )}
                     </div>
                   </div>
                   <button

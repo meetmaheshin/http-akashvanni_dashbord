@@ -235,6 +235,11 @@ class PhoneMapping(Base):
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(20), unique=True, nullable=False, index=True)  # e.g., +916355060488
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Per-customer Twilio credentials (for subaccounts)
+    twilio_account_sid = Column(String(100))  # Customer's Twilio Account SID
+    twilio_auth_token = Column(String(100))   # Customer's Twilio Auth Token
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationship

@@ -767,6 +767,8 @@ def get_whatsapp_customers(
 class PhoneMappingCreate(BaseModel):
     phone_number: str  # Twilio sender phone number (e.g., +916355060488)
     user_id: int  # Customer ID to map to
+    twilio_account_sid: Optional[str] = None  # Per-customer Twilio SID (for subaccounts)
+    twilio_auth_token: Optional[str] = None   # Per-customer Twilio Auth Token
 
 class PhoneMappingResponse(BaseModel):
     id: int
@@ -774,6 +776,7 @@ class PhoneMappingResponse(BaseModel):
     user_id: int
     user_name: str
     user_email: str
+    has_twilio_credentials: bool  # True if per-customer credentials configured
     created_at: datetime
 
 
@@ -794,6 +797,8 @@ def get_phone_mappings(
             "user_id": m.user_id,
             "user_name": user.name if user else "Unknown",
             "user_email": user.email if user else "Unknown",
+            "has_twilio_credentials": bool(m.twilio_account_sid and m.twilio_auth_token),
+            "twilio_account_sid": m.twilio_account_sid[:10] + "..." if m.twilio_account_sid else None,
             "created_at": m.created_at
         })
 
@@ -806,7 +811,7 @@ def create_phone_mapping(
     admin: models.User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Create a phone number to customer mapping"""
+    """Create a phone number to customer mapping with optional Twilio credentials"""
     # Check if mapping already exists
     existing = db.query(models.PhoneMapping).filter(
         models.PhoneMapping.phone_number == mapping.phone_number
@@ -815,6 +820,10 @@ def create_phone_mapping(
     if existing:
         # Update existing mapping
         existing.user_id = mapping.user_id
+        if mapping.twilio_account_sid:
+            existing.twilio_account_sid = mapping.twilio_account_sid
+        if mapping.twilio_auth_token:
+            existing.twilio_auth_token = mapping.twilio_auth_token
         db.commit()
         return {"message": "Phone mapping updated", "id": existing.id}
 
@@ -830,7 +839,9 @@ def create_phone_mapping(
     # Create new mapping
     new_mapping = models.PhoneMapping(
         phone_number=mapping.phone_number,
-        user_id=mapping.user_id
+        user_id=mapping.user_id,
+        twilio_account_sid=mapping.twilio_account_sid,
+        twilio_auth_token=mapping.twilio_auth_token
     )
     db.add(new_mapping)
     db.commit()
@@ -868,24 +879,34 @@ def sync_twilio_messages(
     """
     Sync messages from Twilio API.
     Maps messages to customers based on phone number mappings.
+    Supports per-customer Twilio credentials (for subaccounts).
     """
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
-        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
-
-    try:
-        from twilio.rest import Client as TwilioClient
-        client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-    except ImportError:
-        raise HTTPException(status_code=500, detail="Twilio SDK not installed")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initialize Twilio client: {str(e)}")
+    from twilio.rest import Client as TwilioClient
 
     # Get all phone mappings
     mappings = db.query(models.PhoneMapping).all()
-    phone_to_user = {m.phone_number: m.user_id for m in mappings}
 
-    if not phone_to_user:
+    if not mappings:
         raise HTTPException(status_code=400, detail="No phone mappings configured. Please add phone to customer mappings first.")
+
+    # Group mappings by Twilio credentials
+    # Key: (account_sid, auth_token), Value: list of mappings
+    credential_groups = {}
+    for m in mappings:
+        # Use per-customer credentials if available, otherwise use global
+        account_sid = m.twilio_account_sid or TWILIO_ACCOUNT_SID
+        auth_token = m.twilio_auth_token or TWILIO_AUTH_TOKEN
+
+        if not account_sid or not auth_token:
+            continue  # Skip mappings without credentials
+
+        key = (account_sid, auth_token)
+        if key not in credential_groups:
+            credential_groups[key] = []
+        credential_groups[key].append(m)
+
+    if not credential_groups:
+        raise HTTPException(status_code=400, detail="No Twilio credentials configured for any mapping")
 
     # Get pricing
     template_pricing = db.query(models.PricingConfig).filter(
@@ -901,105 +922,115 @@ def sync_twilio_messages(
     # Calculate date range
     date_from = datetime.utcnow() - timedelta(days=days_back)
 
-    # Fetch messages from Twilio
-    try:
-        twilio_messages = client.messages.list(
-            date_sent_after=date_from,
-            limit=1000
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch Twilio messages: {str(e)}")
-
     imported_count = 0
     skipped_count = 0
     no_mapping_count = 0
     user_stats = {}  # Track per-user stats
 
-    for msg in twilio_messages:
-        # Skip if already exists
-        if msg.sid:
-            existing = db.query(models.Message).filter(
-                models.Message.whatsapp_message_id == msg.sid
-            ).first()
-            if existing:
-                skipped_count += 1
+    # Process each Twilio credential group separately
+    for (account_sid, auth_token), group_mappings in credential_groups.items():
+        try:
+            client = TwilioClient(account_sid, auth_token)
+        except Exception as e:
+            continue  # Skip this credential group if client fails
+
+        # Build phone to user mapping for this group
+        phone_to_user = {m.phone_number: m.user_id for m in group_mappings}
+
+        # Fetch messages from this Twilio account
+        try:
+            twilio_messages = client.messages.list(
+                date_sent_after=date_from,
+                limit=1000
+            )
+        except Exception as e:
+            continue  # Skip this credential group if fetch fails
+
+        for msg in twilio_messages:
+            # Skip if already exists
+            if msg.sid:
+                existing = db.query(models.Message).filter(
+                    models.Message.whatsapp_message_id == msg.sid
+                ).first()
+                if existing:
+                    skipped_count += 1
+                    continue
+
+            # Determine sender/recipient and find user
+            from_number = msg.from_.replace('whatsapp:', '') if msg.from_ else ''
+            to_number = msg.to.replace('whatsapp:', '') if msg.to else ''
+
+            # Check direction
+            is_outbound = msg.direction and 'outbound' in msg.direction.lower()
+
+            # Find user based on from number (for outbound) or to number (for inbound)
+            user_id = None
+            if is_outbound:
+                user_id = phone_to_user.get(from_number)
+            else:
+                user_id = phone_to_user.get(to_number)
+
+            if not user_id:
+                no_mapping_count += 1
                 continue
 
-        # Determine sender/recipient and find user
-        from_number = msg.from_.replace('whatsapp:', '') if msg.from_ else ''
-        to_number = msg.to.replace('whatsapp:', '') if msg.to else ''
+            # Determine message type (default to template for outbound, session for inbound)
+            if is_outbound:
+                msg_type = 'template'
+                message_cost = template_cost
+            else:
+                msg_type = 'session'
+                message_cost = 0  # Don't charge for inbound
 
-        # Check direction
-        is_outbound = msg.direction and 'outbound' in msg.direction.lower()
+            # Determine recipient phone
+            recipient_phone = to_number if is_outbound else from_number
 
-        # Find user based on from number (for outbound) or to number (for inbound)
-        user_id = None
-        if is_outbound:
-            user_id = phone_to_user.get(from_number)
-        else:
-            user_id = phone_to_user.get(to_number)
+            # Map status
+            status_map = {
+                'delivered': 'delivered',
+                'sent': 'sent',
+                'read': 'read',
+                'failed': 'failed',
+                'undelivered': 'failed',
+                'received': 'delivered',
+                'queued': 'pending',
+                'sending': 'pending'
+            }
+            mapped_status = status_map.get(msg.status.lower() if msg.status else 'sent', 'sent')
 
-        if not user_id:
-            no_mapping_count += 1
-            continue
+            # Calculate cost (only for outbound, non-failed)
+            msg_cost = message_cost if (is_outbound and mapped_status != 'failed') else 0
 
-        # Determine message type (default to template for outbound, session for inbound)
-        if is_outbound:
-            msg_type = 'template'
-            message_cost = template_cost
-        else:
-            msg_type = 'session'
-            message_cost = 0  # Don't charge for inbound
+            # Create message record
+            message = models.Message(
+                user_id=user_id,
+                recipient_phone=recipient_phone,
+                recipient_name=None,
+                message_type=msg_type,
+                template_name=f"Twilio Sync - {msg_type}" if msg_type == "template" else None,
+                message_content=msg.body or '',
+                direction='outbound' if is_outbound else 'inbound',
+                status=mapped_status,
+                whatsapp_message_id=msg.sid,
+                cost=msg_cost,
+                created_at=msg.date_sent or datetime.utcnow(),
+                sent_at=msg.date_sent,
+                delivered_at=msg.date_sent if mapped_status == 'delivered' else None,
+                read_at=msg.date_sent if mapped_status == 'read' else None,
+                error_message=msg.error_message if hasattr(msg, 'error_message') else None
+            )
+            db.add(message)
+            imported_count += 1
 
-        # Determine recipient phone
-        recipient_phone = to_number if is_outbound else from_number
-
-        # Map status
-        status_map = {
-            'delivered': 'delivered',
-            'sent': 'sent',
-            'read': 'read',
-            'failed': 'failed',
-            'undelivered': 'failed',
-            'received': 'delivered',
-            'queued': 'pending',
-            'sending': 'pending'
-        }
-        mapped_status = status_map.get(msg.status.lower() if msg.status else 'sent', 'sent')
-
-        # Calculate cost (only for outbound, non-failed)
-        msg_cost = message_cost if (is_outbound and mapped_status != 'failed') else 0
-
-        # Create message record
-        message = models.Message(
-            user_id=user_id,
-            recipient_phone=recipient_phone,
-            recipient_name=None,
-            message_type=msg_type,
-            template_name=f"Twilio Sync - {msg_type}" if msg_type == "template" else None,
-            message_content=msg.body or '',
-            direction='outbound' if is_outbound else 'inbound',
-            status=mapped_status,
-            whatsapp_message_id=msg.sid,
-            cost=msg_cost,
-            created_at=msg.date_sent or datetime.utcnow(),
-            sent_at=msg.date_sent,
-            delivered_at=msg.date_sent if mapped_status == 'delivered' else None,
-            read_at=msg.date_sent if mapped_status == 'read' else None,
-            error_message=msg.error_message if hasattr(msg, 'error_message') else None
-        )
-        db.add(message)
-        imported_count += 1
-
-        # Track user stats
-        if user_id not in user_stats:
-            user_stats[user_id] = {'count': 0, 'cost': 0, 'template': 0, 'session': 0}
-        user_stats[user_id]['count'] += 1
-        user_stats[user_id]['cost'] += msg_cost
-        if msg_type == 'template':
-            user_stats[user_id]['template'] += 1
-        else:
-            user_stats[user_id]['session'] += 1
+            # Track user stats
+            if user_id not in user_stats:
+                user_stats[user_id] = {'count': 0, 'cost': 0, 'template': 0, 'session': 0}
+            user_stats[user_id]['count'] += 1
+            user_stats[user_id]['cost'] += msg_cost
+            if msg_type == 'template':
+                user_stats[user_id]['template'] += 1
+            else:
+                user_stats[user_id]['session'] += 1
 
     # Deduct balance for each user
     for user_id, stats in user_stats.items():

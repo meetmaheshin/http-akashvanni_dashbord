@@ -274,11 +274,8 @@ def sync_customer_messages(
     """
     Auto-sync messages from Twilio for the current customer.
     This runs automatically when customer opens Messages page.
+    Uses per-customer Twilio credentials if configured, otherwise falls back to global.
     """
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
-        # Twilio not configured, silently return
-        return {"synced": 0, "message": "Twilio not configured"}
-
     # Find phone mapping for this user
     mapping = db.query(models.PhoneMapping).filter(
         models.PhoneMapping.user_id == current_user.id
@@ -288,8 +285,16 @@ def sync_customer_messages(
         # No mapping for this user, silently return
         return {"synced": 0, "message": "No phone mapping configured"}
 
+    # Use per-customer Twilio credentials if available, otherwise use global
+    account_sid = mapping.twilio_account_sid or TWILIO_ACCOUNT_SID
+    auth_token = mapping.twilio_auth_token or TWILIO_AUTH_TOKEN
+
+    if not account_sid or not auth_token:
+        # No Twilio credentials configured
+        return {"synced": 0, "message": "Twilio not configured"}
+
     try:
-        twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        twilio_client = TwilioClient(account_sid, auth_token)
     except Exception as e:
         return {"synced": 0, "message": f"Twilio client error: {str(e)}"}
 
