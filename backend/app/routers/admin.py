@@ -7,9 +7,11 @@ from pydantic import BaseModel
 import csv
 import io
 import os
+import razorpay
 from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_admin
+from ..config import settings
 
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -1333,3 +1335,211 @@ def export_public_payment_logs_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=payment_logs.csv"}
     )
+
+
+# GST rate (same as in payments.py)
+GST_RATE = 0.18
+
+def calculate_gst(total_amount_paise: int):
+    """Calculate GST breakdown from total amount"""
+    subtotal = int(total_amount_paise / (1 + GST_RATE))
+    gst_amount = total_amount_paise - subtotal
+    cgst = gst_amount // 2
+    sgst = gst_amount - cgst
+    return {
+        "subtotal": subtotal,
+        "cgst": cgst,
+        "sgst": sgst,
+        "igst": 0,
+        "total": total_amount_paise,
+        "credited": subtotal
+    }
+
+
+def generate_invoice_number_admin(db: Session) -> str:
+    """Generate unique invoice number like TZ-2024-0001"""
+    year = datetime.now().year
+    company = db.query(models.CompanyConfig).first()
+    prefix = company.invoice_prefix if company else "TZ"
+    count = db.query(models.Invoice).filter(
+        models.Invoice.invoice_number.like(f"{prefix}-{year}-%")
+    ).count()
+    return f"{prefix}-{year}-{str(count + 1).zfill(4)}"
+
+
+@router.post("/complete-pending-payment/{order_id}")
+def complete_pending_payment(
+    order_id: str,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Admin endpoint to manually complete a pending payment.
+    This fetches the payment status from Razorpay and completes it if captured.
+    """
+    # Find the transaction
+    transaction = db.query(models.Transaction).filter(
+        models.Transaction.razorpay_order_id == order_id
+    ).first()
+
+    if not transaction:
+        raise HTTPException(status_code=404, detail=f"Transaction with order_id {order_id} not found")
+
+    if transaction.status == "completed":
+        # Get user's current balance
+        user = db.query(models.User).filter(models.User.id == transaction.user_id).first()
+        return {
+            "status": "already_completed",
+            "message": "This transaction is already completed",
+            "transaction_id": transaction.id,
+            "user_balance": user.balance / 100 if user else None
+        }
+
+    # Initialize Razorpay client
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        raise HTTPException(status_code=500, detail="Razorpay not configured")
+
+    try:
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initialize Razorpay: {str(e)}")
+
+    # Fetch order from Razorpay
+    try:
+        razorpay_order = client.order.fetch(order_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch order from Razorpay: {str(e)}")
+
+    # Check order status
+    if razorpay_order.get("status") != "paid":
+        return {
+            "status": "not_paid",
+            "message": f"Order status is '{razorpay_order.get('status')}', not 'paid'",
+            "razorpay_order": razorpay_order
+        }
+
+    # Order is paid, fetch payments for this order
+    try:
+        payments = client.order.payments(order_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch payments: {str(e)}")
+
+    # Find the captured payment
+    captured_payment = None
+    for payment in payments.get("items", []):
+        if payment.get("status") == "captured":
+            captured_payment = payment
+            break
+
+    if not captured_payment:
+        return {
+            "status": "no_captured_payment",
+            "message": "No captured payment found for this order",
+            "payments": payments
+        }
+
+    # Get the user
+    user = db.query(models.User).filter(models.User.id == transaction.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found for this transaction")
+
+    # Calculate GST based on original transaction amount (which is total paid)
+    original_amount = razorpay_order.get("amount", transaction.amount)
+    gst_calc = calculate_gst(original_amount)
+
+    # Generate invoice
+    invoice_number = generate_invoice_number_admin(db)
+
+    # Build customer address
+    customer_address = None
+    if user.billing_address:
+        parts = [user.billing_address]
+        if user.city:
+            parts.append(user.city)
+        if user.state:
+            parts.append(user.state)
+        if user.pincode:
+            parts.append(user.pincode)
+        customer_address = ", ".join(parts)
+
+    # Create invoice
+    invoice = models.Invoice(
+        user_id=user.id,
+        invoice_number=invoice_number,
+        customer_name=user.name,
+        customer_email=user.email,
+        customer_company=user.company_name,
+        customer_gst=user.gst_number,
+        customer_address=customer_address,
+        subtotal=gst_calc["subtotal"],
+        cgst_amount=gst_calc["cgst"],
+        sgst_amount=gst_calc["sgst"],
+        igst_amount=gst_calc["igst"],
+        total_amount=gst_calc["total"],
+        credited_amount=gst_calc["credited"],
+        razorpay_payment_id=captured_payment["id"],
+        payment_date=datetime.utcnow(),
+        status="paid"
+    )
+    db.add(invoice)
+    db.flush()
+
+    # Update transaction
+    transaction.razorpay_payment_id = captured_payment["id"]
+    transaction.status = "completed"
+    transaction.invoice_id = invoice.id
+    transaction.amount = gst_calc["credited"]
+    transaction.description = f"Wallet recharge - Invoice #{invoice_number} (Admin completed)"
+
+    # Add credited amount to user balance
+    old_balance = user.balance
+    user.balance += gst_calc["credited"]
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "status": "success",
+        "message": f"Payment completed successfully! ₹{gst_calc['credited'] / 100:.2f} added to wallet",
+        "transaction_id": transaction.id,
+        "invoice_number": invoice_number,
+        "razorpay_payment_id": captured_payment["id"],
+        "old_balance": old_balance / 100,
+        "credited_amount": gst_calc["credited"] / 100,
+        "new_balance": user.balance / 100,
+        "user_email": user.email
+    }
+
+
+@router.get("/pending-payments")
+def get_pending_payments(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all pending payment transactions (credit transactions with pending status).
+    """
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.type == "credit",
+        models.Transaction.status == "pending"
+    ).order_by(models.Transaction.created_at.desc()).all()
+
+    result = []
+    for t in transactions:
+        user = db.query(models.User).filter(models.User.id == t.user_id).first()
+        result.append({
+            "id": t.id,
+            "razorpay_order_id": t.razorpay_order_id,
+            "amount": t.amount,
+            "amount_rupees": t.amount / 100,
+            "user_id": t.user_id,
+            "user_email": user.email if user else None,
+            "user_name": user.name if user else None,
+            "created_at": t.created_at,
+            "description": t.description
+        })
+
+    return {
+        "total": len(result),
+        "pending_payments": result
+    }
