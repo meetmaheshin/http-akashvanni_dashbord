@@ -12,6 +12,7 @@ import AddMoney from './pages/customer/AddMoney';
 import Profile from './pages/customer/Profile';
 import Invoices from './pages/customer/Invoices';
 import WhatsAppConnect from './pages/customer/WhatsAppConnect';
+import Templates from './pages/customer/Templates';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Customers from './pages/admin/Customers';
 import Pricing from './pages/admin/Pricing';
@@ -138,6 +139,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <WhatsAppConnect />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/templates"
+        element={
+          <ProtectedRoute>
+            <Templates />
           </ProtectedRoute>
         }
       />

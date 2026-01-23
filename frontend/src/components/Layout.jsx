@@ -16,13 +16,15 @@ import {
   Upload,
   Smartphone,
   RefreshCw,
-  Eye
+  Eye,
+  LayoutTemplate
 } from 'lucide-react';
 import { useState } from 'react';
 
 const customerNavItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'WhatsApp', path: '/whatsapp-connect', icon: Smartphone },
+  { name: 'Templates', path: '/templates', icon: LayoutTemplate },
   { name: 'Messages', path: '/messages', icon: MessageSquare },
   { name: 'Transactions', path: '/transactions', icon: History },
   { name: 'Invoices', path: '/invoices', icon: FileText },

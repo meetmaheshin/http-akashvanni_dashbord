@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
 import os
+import requests
 from twilio.rest import Client as TwilioClient
 from .. import models, schemas
 from ..database import get_db
@@ -437,3 +439,285 @@ def update_profile(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+# ============== WhatsApp Templates API ==============
+
+class TemplateVariable(BaseModel):
+    type: str = "text"
+    text: Optional[str] = None
+
+class TemplateCreateRequest(BaseModel):
+    friendly_name: str
+    language: str = "en"
+    category: str = "MARKETING"  # MARKETING, UTILITY, AUTHENTICATION
+    template_type: str = "twilio/text"  # twilio/text, twilio/media, twilio/call-to-action, etc.
+    body: str
+    # Optional fields for more complex templates
+    header_text: Optional[str] = None
+    footer_text: Optional[str] = None
+    button_text: Optional[str] = None
+    button_url: Optional[str] = None
+
+
+def get_user_twilio_credentials(current_user: models.User, db: Session):
+    """Get Twilio credentials for the current user (from mapping or global)"""
+    mapping = db.query(models.PhoneMapping).filter(
+        models.PhoneMapping.user_id == current_user.id
+    ).first()
+
+    if mapping and mapping.twilio_account_sid and mapping.twilio_auth_token:
+        return mapping.twilio_account_sid, mapping.twilio_auth_token
+
+    # Fall back to global credentials
+    return TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN
+
+
+@router.get("/templates")
+def get_templates(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all WhatsApp content templates for the user's Twilio account.
+    Uses per-customer Twilio credentials if configured.
+    """
+    account_sid, auth_token = get_user_twilio_credentials(current_user, db)
+
+    if not account_sid or not auth_token:
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+
+    try:
+        # Use Twilio Content API to fetch templates
+        url = f"https://content.twilio.com/v1/Content"
+        response = requests.get(
+            url,
+            auth=(account_sid, auth_token)
+        )
+
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Twilio API error: {response.text}"
+            )
+
+        data = response.json()
+        contents = data.get("contents", [])
+
+        # Format response
+        templates = []
+        for content in contents:
+            # Get approval status from WhatsApp
+            approval_status = None
+            approval_requests = content.get("approval_requests", {})
+            if approval_requests and "whatsapp" in approval_requests:
+                approval_status = approval_requests["whatsapp"].get("status")
+
+            templates.append({
+                "sid": content.get("sid"),
+                "friendly_name": content.get("friendly_name"),
+                "language": content.get("language"),
+                "date_created": content.get("date_created"),
+                "date_updated": content.get("date_updated"),
+                "types": content.get("types", {}),
+                "variables": content.get("variables", {}),
+                "approval_status": approval_status,
+                "approval_requests": approval_requests
+            })
+
+        return {
+            "templates": templates,
+            "count": len(templates),
+            "account_sid": account_sid[:10] + "..." if account_sid else None
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch templates: {str(e)}")
+
+
+@router.get("/templates/{template_sid}")
+def get_template_detail(
+    template_sid: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get details of a specific template"""
+    account_sid, auth_token = get_user_twilio_credentials(current_user, db)
+
+    if not account_sid or not auth_token:
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+
+    try:
+        url = f"https://content.twilio.com/v1/Content/{template_sid}"
+        response = requests.get(
+            url,
+            auth=(account_sid, auth_token)
+        )
+
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Twilio API error: {response.text}"
+            )
+
+        return response.json()
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch template: {str(e)}")
+
+
+@router.post("/templates")
+def create_template(
+    template: TemplateCreateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new WhatsApp content template and submit for approval.
+    Templates need to be approved by WhatsApp before they can be used.
+    """
+    account_sid, auth_token = get_user_twilio_credentials(current_user, db)
+
+    if not account_sid or not auth_token:
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+
+    try:
+        # Build the content type structure based on template type
+        types = {}
+
+        if template.template_type == "twilio/text":
+            types["twilio/text"] = {
+                "body": template.body
+            }
+        elif template.template_type == "twilio/media":
+            types["twilio/media"] = {
+                "body": template.body
+            }
+        elif template.template_type == "twilio/call-to-action":
+            actions = []
+            if template.button_text and template.button_url:
+                actions.append({
+                    "type": "URL",
+                    "title": template.button_text,
+                    "url": template.button_url
+                })
+            types["twilio/call-to-action"] = {
+                "body": template.body,
+                "actions": actions
+            }
+        else:
+            # Default to text
+            types["twilio/text"] = {
+                "body": template.body
+            }
+
+        # Extract variables from body (format: {{1}}, {{2}}, etc.)
+        import re
+        var_pattern = re.compile(r'\{\{(\d+)\}\}')
+        var_matches = var_pattern.findall(template.body)
+
+        variables = {}
+        for var_num in sorted(set(var_matches)):
+            variables[var_num] = f"variable_{var_num}"
+
+        # Create content payload
+        payload = {
+            "friendly_name": template.friendly_name,
+            "language": template.language,
+            "types": types
+        }
+
+        if variables:
+            payload["variables"] = variables
+
+        # Create content via Twilio API
+        url = "https://content.twilio.com/v1/Content"
+        response = requests.post(
+            url,
+            json=payload,
+            auth=(account_sid, auth_token)
+        )
+
+        if response.status_code not in [200, 201]:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                error_detail = error_json.get("message", response.text)
+            except:
+                pass
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Failed to create template: {error_detail}"
+            )
+
+        content_data = response.json()
+        content_sid = content_data.get("sid")
+
+        # Now submit for WhatsApp approval
+        approval_url = f"https://content.twilio.com/v1/Content/{content_sid}/ApprovalRequests/whatsapp"
+        approval_payload = {
+            "name": template.friendly_name,
+            "category": template.category
+        }
+
+        approval_response = requests.post(
+            approval_url,
+            json=approval_payload,
+            auth=(account_sid, auth_token)
+        )
+
+        approval_status = "not_submitted"
+        if approval_response.status_code in [200, 201]:
+            approval_data = approval_response.json()
+            approval_status = approval_data.get("status", "pending")
+        else:
+            # Template created but approval submission failed
+            approval_status = f"approval_failed: {approval_response.text}"
+
+        return {
+            "success": True,
+            "template_sid": content_sid,
+            "friendly_name": template.friendly_name,
+            "approval_status": approval_status,
+            "message": "Template created and submitted for WhatsApp approval"
+        }
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create template: {str(e)}")
+
+
+@router.delete("/templates/{template_sid}")
+def delete_template(
+    template_sid: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a content template"""
+    account_sid, auth_token = get_user_twilio_credentials(current_user, db)
+
+    if not account_sid or not auth_token:
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+
+    try:
+        url = f"https://content.twilio.com/v1/Content/{template_sid}"
+        response = requests.delete(
+            url,
+            auth=(account_sid, auth_token)
+        )
+
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        if response.status_code not in [200, 204]:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Failed to delete template: {response.text}"
+            )
+
+        return {"success": True, "message": "Template deleted successfully"}
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete template: {str(e)}")
