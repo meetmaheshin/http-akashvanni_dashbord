@@ -458,6 +458,9 @@ class TemplateCreateRequest(BaseModel):
     footer_text: Optional[str] = None
     button_text: Optional[str] = None
     button_url: Optional[str] = None
+    # Sample values for variables (required by WhatsApp for approval)
+    # Format: {"1": "John", "2": "12345"} for {{1}} and {{2}}
+    variable_samples: Optional[dict] = None
 
 
 def get_user_twilio_credentials(current_user: models.User, db: Session):
@@ -621,7 +624,11 @@ def create_template(
 
         variables = {}
         for var_num in sorted(set(var_matches)):
-            variables[var_num] = f"variable_{var_num}"
+            # Use provided sample value or default placeholder
+            if template.variable_samples and var_num in template.variable_samples:
+                variables[var_num] = template.variable_samples[var_num]
+            else:
+                variables[var_num] = f"sample_value_{var_num}"
 
         # Create content payload
         payload = {
