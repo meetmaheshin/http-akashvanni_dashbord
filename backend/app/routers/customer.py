@@ -510,14 +510,41 @@ def get_templates(
         # Format response
         templates = []
         for content in contents:
-            # Get approval status from WhatsApp
+            content_sid = content.get("sid")
+
+            # Get approval status - try multiple locations
             approval_status = None
             approval_requests = content.get("approval_requests", {})
+
+            # Method 1: Check approval_requests.whatsapp.status
             if approval_requests and "whatsapp" in approval_requests:
-                approval_status = approval_requests["whatsapp"].get("status")
+                wa_approval = approval_requests.get("whatsapp", {})
+                if isinstance(wa_approval, dict):
+                    approval_status = wa_approval.get("status")
+
+            # Method 2: If not found, fetch approval status separately
+            if not approval_status and content_sid:
+                try:
+                    approval_url = f"https://content.twilio.com/v1/Content/{content_sid}/ApprovalRequests"
+                    approval_response = requests.get(
+                        approval_url,
+                        auth=(account_sid, auth_token)
+                    )
+                    if approval_response.status_code == 200:
+                        approval_data = approval_response.json()
+                        # Check for whatsapp approval in the list
+                        for approval in approval_data.get("approval_requests", []):
+                            if approval.get("channel_type") == "whatsapp":
+                                approval_status = approval.get("status")
+                                break
+                        # Also check direct whatsapp key
+                        if not approval_status and "whatsapp" in approval_data:
+                            approval_status = approval_data["whatsapp"].get("status")
+                except:
+                    pass  # Silently continue if approval fetch fails
 
             templates.append({
-                "sid": content.get("sid"),
+                "sid": content_sid,
                 "friendly_name": content.get("friendly_name"),
                 "language": content.get("language"),
                 "date_created": content.get("date_created"),

@@ -219,37 +219,45 @@ export default function Templates() {
       );
     }
 
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-            <CheckCircle className="h-3 w-3" />
-            Approved
-          </span>
-        );
-      case 'pending':
-      case 'submitted':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
-            <Clock className="h-3 w-3" />
-            Pending
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">
-            <XCircle className="h-3 w-3" />
-            Rejected
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-            <AlertCircle className="h-3 w-3" />
-            {status}
-          </span>
-        );
+    const statusLower = status.toLowerCase();
+
+    // Check for approved status (various formats Twilio might return)
+    if (statusLower === 'approved' || statusLower === 'active' || statusLower === 'enabled') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+          <CheckCircle className="h-3 w-3" />
+          Approved
+        </span>
+      );
     }
+
+    // Check for pending status
+    if (statusLower === 'pending' || statusLower === 'submitted' || statusLower === 'in_review' || statusLower === 'received') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+          <Clock className="h-3 w-3" />
+          Pending
+        </span>
+      );
+    }
+
+    // Check for rejected status
+    if (statusLower === 'rejected' || statusLower === 'disabled' || statusLower === 'failed') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">
+          <XCircle className="h-3 w-3" />
+          Rejected
+        </span>
+      );
+    }
+
+    // Default - show the actual status
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+        <AlertCircle className="h-3 w-3" />
+        {status}
+      </span>
+    );
   };
 
   const getTemplateBody = (types) => {
