@@ -23,6 +23,7 @@ import ImportMessages from './pages/admin/ImportMessages';
 import WhatsAppSettings from './pages/admin/WhatsAppSettings';
 import TwilioSync from './pages/admin/TwilioSync';
 import LowBalanceAlerts from './pages/admin/LowBalanceAlerts';
+import CampaignOverview from './pages/admin/CampaignOverview';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -230,6 +231,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <LowBalanceAlerts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/campaigns"
+        element={
+          <ProtectedRoute adminOnly>
+            <CampaignOverview />
           </ProtectedRoute>
         }
       />

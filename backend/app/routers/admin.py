@@ -1690,3 +1690,124 @@ def send_low_balance_alerts(
         "failed": failed_count,
         "results": results
     }
+
+
+# ========== Campaign Overview ==========
+
+@router.get("/campaign-overview")
+def get_admin_campaign_overview(
+    start_date: str = Query(..., description="Start date in ISO format (YYYY-MM-DDTHH:MM:SS)"),
+    end_date: str = Query(..., description="End date in ISO format (YYYY-MM-DDTHH:MM:SS)"),
+    user_id: Optional[int] = Query(None, description="Filter by specific user ID"),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get campaign overview with message statistics for admin.
+    Can filter by user_id or get stats for all users.
+    """
+    try:
+        start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        end_datetime = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use ISO 8601 format.")
+
+    # Build query
+    query = db.query(models.Message).filter(
+        models.Message.created_at >= start_datetime,
+        models.Message.created_at <= end_datetime
+    )
+
+    if user_id:
+        query = query.filter(models.Message.user_id == user_id)
+
+    messages = query.all()
+
+    # Calculate statistics
+    total_messages = len(messages)
+
+    if total_messages == 0:
+        return {
+            "total_messages": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "replied": 0,
+            "failed": 0,
+            "pending": 0,
+            "campaign_status": "NO DATA",
+            "campaign_name": "No Campaign",
+            "trigger_campaign": "N/A",
+            "processed_at": None,
+            "audience_type": "N/A",
+            "audience_size": 0,
+            "message_count": 0,
+            "message_type": "N/A",
+            "avg_delivery_time": "N/A",
+            "date_range": {"start": start_date, "end": end_date}
+        }
+
+    status_breakdown = {
+        "sent": 0,
+        "delivered": 0,
+        "read": 0,
+        "failed": 0,
+        "pending": 0
+    }
+
+    delivery_times = []
+    unique_recipients = set()
+
+    for message in messages:
+        status = message.status.lower() if message.status else "pending"
+        if status in status_breakdown:
+            status_breakdown[status] += 1
+        unique_recipients.add(message.recipient_phone)
+
+        if message.sent_at and message.delivered_at:
+            delivery_time = (message.delivered_at - message.sent_at).total_seconds()
+            delivery_times.append(delivery_time)
+
+    # Calculate average delivery time
+    avg_delivery_time = "N/A"
+    if delivery_times:
+        avg_seconds = sum(delivery_times) / len(delivery_times)
+        if avg_seconds < 60:
+            avg_delivery_time = f"{avg_seconds:.0f}s"
+        else:
+            avg_minutes = avg_seconds / 60
+            avg_delivery_time = f"{avg_minutes:.1f}m"
+
+    # Get message types
+    message_types = db.query(models.Message.message_type).filter(
+        models.Message.created_at >= start_datetime,
+        models.Message.created_at <= end_datetime
+    )
+    if user_id:
+        message_types = message_types.filter(models.Message.user_id == user_id)
+    message_types = message_types.distinct().all()
+    message_type_str = ", ".join([mt[0].capitalize() for mt in message_types if mt[0]]) if message_types else "Mixed"
+
+    # Get latest message time as processed_at
+    latest_message = query.order_by(models.Message.created_at.desc()).first()
+    processed_at = latest_message.created_at.isoformat() if latest_message else None
+
+    return {
+        "total_messages": total_messages,
+        "sent": status_breakdown["sent"],
+        "delivered": status_breakdown["delivered"],
+        "read": status_breakdown["read"],
+        "replied": 0,  # Would need reply tracking
+        "failed": status_breakdown["failed"],
+        "pending": status_breakdown["pending"],
+        "campaign_status": "COMPLETED" if status_breakdown["pending"] == 0 else "IN PROGRESS",
+        "campaign_name": "WhatsApp Campaign",
+        "trigger_campaign": "Immediately",
+        "processed_at": processed_at,
+        "audience_type": "All Users" if not user_id else "Segmented",
+        "audience_size": len(unique_recipients),
+        "message_count": total_messages,
+        "message_type": message_type_str,
+        "avg_delivery_time": avg_delivery_time,
+        "date_range": {"start": start_date, "end": end_date}
+    }

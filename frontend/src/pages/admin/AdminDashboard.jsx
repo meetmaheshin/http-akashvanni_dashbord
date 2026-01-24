@@ -112,6 +112,20 @@ export default function AdminDashboard() {
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Link
+          to="/admin/campaigns"
+          className="card hover:border-indigo-300 transition-colors group flex items-center gap-4"
+        >
+          <div className="bg-indigo-100 p-3 rounded-xl group-hover:bg-indigo-200 transition-colors">
+            <TrendingUp className="h-6 w-6 text-indigo-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">Campaign Overview</h3>
+            <p className="text-sm text-gray-500">View message statistics</p>
+          </div>
+          <ArrowUpRight className="h-5 w-5 text-gray-400" />
+        </Link>
+
+        <Link
           to="/admin/customers"
           className="card hover:border-blue-300 transition-colors group flex items-center gap-4"
         >

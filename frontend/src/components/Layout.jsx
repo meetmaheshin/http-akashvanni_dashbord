@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Eye,
   LayoutTemplate,
-  AlertTriangle
+  AlertTriangle,
+  Megaphone
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -36,6 +37,7 @@ const customerNavItems = [
 const adminNavItems = [
   { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
   { name: 'Customers', path: '/admin/customers', icon: Users },
+  { name: 'Campaigns', path: '/admin/campaigns', icon: Megaphone },
   { name: 'Transactions', path: '/admin/transactions', icon: History },
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
   { name: 'Import CSV', path: '/admin/import', icon: Upload },
