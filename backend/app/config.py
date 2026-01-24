@@ -30,4 +30,14 @@ class Settings:
         self.ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "admin@akashvanni.com")
         self.ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "changeme123")
 
+        # Email settings (for alerts)
+        self.SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.hostinger.com")
+        self.SMTP_PORT: int = int(os.getenv("SMTP_PORT", "465"))
+        self.SMTP_USER: str = os.getenv("SMTP_USER", "admin@invoaice.com")
+        self.SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+        self.SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "Invoaice")
+
+        # Low balance threshold (in paise - ₹200 = 20000 paise)
+        self.LOW_BALANCE_THRESHOLD: int = int(os.getenv("LOW_BALANCE_THRESHOLD", "20000"))
+
 settings = Settings()

@@ -8,7 +8,7 @@ This module handles:
 4. Managing message templates
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -19,6 +19,7 @@ from datetime import datetime
 from ..database import get_db
 from ..auth import get_current_user
 from ..models import User, Message
+from ..email_utils import check_and_send_low_balance_alert
 
 router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 
@@ -305,6 +306,7 @@ async def test_connection(
 @router.post("/send-message")
 async def send_message(
     request: SendMessageRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -394,6 +396,9 @@ async def send_message(
             )
             db.add(message)
             db.commit()
+
+            # Check for low balance and send alert in background
+            background_tasks.add_task(check_and_send_low_balance_alert, current_user)
 
             return {
                 "success": True,

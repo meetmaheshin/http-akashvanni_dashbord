@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
@@ -12,6 +12,7 @@ from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_admin
 from ..config import settings
+from ..email_utils import check_and_send_low_balance_alert
 
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -437,6 +438,7 @@ def delete_api_config(
 @router.post("/import-messages/{user_id}")
 def import_messages_csv(
     user_id: int,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     deduct_balance: bool = Query(True, description="Deduct balance for imported messages"),
     admin: models.User = Depends(get_current_admin),
@@ -586,6 +588,9 @@ def import_messages_csv(
                 status="completed"
             )
             db.add(transaction)
+
+            # Check for low balance and send alert in background
+            background_tasks.add_task(check_and_send_low_balance_alert, user)
 
         db.commit()
 
@@ -872,6 +877,7 @@ def delete_phone_mapping(
 
 @router.post("/sync-twilio-messages")
 def sync_twilio_messages(
+    background_tasks: BackgroundTasks,
     days_back: int = Query(7, description="Number of days to sync"),
     admin: models.User = Depends(get_current_admin),
     db: Session = Depends(get_db)
@@ -1054,6 +1060,9 @@ def sync_twilio_messages(
                     status="completed"
                 )
                 db.add(transaction)
+
+                # Check for low balance and send alert in background
+                background_tasks.add_task(check_and_send_low_balance_alert, user)
 
     db.commit()
 
@@ -1573,4 +1582,111 @@ def get_pending_payments(
     return {
         "total": len(result),
         "pending_payments": result
+    }
+
+
+# ========== Low Balance Alerts ==========
+
+from ..email_utils import LOW_BALANCE_THRESHOLD, send_low_balance_alert
+
+@router.get("/low-balance-users")
+def get_low_balance_users(
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all customers with balance below the threshold (Rs.200).
+    """
+    threshold_rupees = LOW_BALANCE_THRESHOLD / 100
+
+    # Get all active customers with balance below threshold
+    users = db.query(models.User).filter(
+        models.User.balance < LOW_BALANCE_THRESHOLD,
+        models.User.role == "customer",
+        models.User.is_active == True
+    ).order_by(models.User.balance.asc()).all()
+
+    return {
+        "threshold_paise": LOW_BALANCE_THRESHOLD,
+        "threshold_rupees": threshold_rupees,
+        "total": len(users),
+        "users": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "company_name": user.company_name,
+                "phone": user.phone,
+                "balance_paise": user.balance,
+                "balance_rupees": user.balance / 100
+            }
+            for user in users
+        ]
+    }
+
+
+@router.post("/send-low-balance-alerts")
+def send_low_balance_alerts(
+    user_ids: Optional[List[int]] = None,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Send low balance alert emails to customers.
+
+    - If user_ids is provided, send only to those users
+    - If user_ids is None/empty, send to all users below threshold
+    """
+    # Build query
+    query = db.query(models.User).filter(
+        models.User.balance < LOW_BALANCE_THRESHOLD,
+        models.User.role == "customer",
+        models.User.is_active == True
+    )
+
+    # Filter by specific user IDs if provided
+    if user_ids:
+        query = query.filter(models.User.id.in_(user_ids))
+
+    users = query.all()
+
+    if not users:
+        return {
+            "message": "No users to send alerts to",
+            "sent": 0,
+            "failed": 0
+        }
+
+    sent_count = 0
+    failed_count = 0
+    results = []
+
+    for user in users:
+        success = send_low_balance_alert(
+            user_email=user.email,
+            user_name=user.name,
+            balance_paise=user.balance,
+            company_name=user.company_name
+        )
+
+        if success:
+            sent_count += 1
+            results.append({
+                "user_id": user.id,
+                "email": user.email,
+                "status": "sent"
+            })
+        else:
+            failed_count += 1
+            results.append({
+                "user_id": user.id,
+                "email": user.email,
+                "status": "failed"
+            })
+
+    return {
+        "message": f"Sent {sent_count} alert(s), {failed_count} failed",
+        "sent": sent_count,
+        "failed": failed_count,
+        "results": results
     }

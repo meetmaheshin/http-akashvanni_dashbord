@@ -17,7 +17,8 @@ import {
   Smartphone,
   RefreshCw,
   Eye,
-  LayoutTemplate
+  LayoutTemplate,
+  AlertTriangle
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -39,6 +40,7 @@ const adminNavItems = [
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
   { name: 'Import CSV', path: '/admin/import', icon: Upload },
   { name: 'Twilio Sync', path: '/admin/twilio-sync', icon: RefreshCw },
+  { name: 'Low Balance', path: '/admin/low-balance-alerts', icon: AlertTriangle },
   { name: 'Pricing', path: '/admin/pricing', icon: DollarSign },
   { name: 'WhatsApp API', path: '/admin/whatsapp', icon: Smartphone },
   { name: 'Settings', path: '/admin/settings', icon: Cog },
@@ -151,6 +153,31 @@ export default function Layout({ children }) {
             >
               Back to Admin
             </button>
+          </div>
+        )}
+
+        {/* Low Balance Warning for Customers */}
+        {!isAdmin && user?.balance < 20000 && (
+          <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <div>
+                <span className="font-medium">Low Balance Alert!</span>
+                <span className="ml-2 text-red-100">
+                  Your balance is Rs.{(user?.balance / 100 || 0).toFixed(2)}.
+                  {user?.balance <= 0
+                    ? ' Messages cannot be sent. Please recharge immediately!'
+                    : ' Please recharge soon to avoid service interruption.'}
+                </span>
+              </div>
+            </div>
+            <Link
+              to="/add-money"
+              className="bg-white text-red-600 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors flex items-center gap-2 flex-shrink-0"
+            >
+              <CreditCard className="h-4 w-4" />
+              Recharge Now
+            </Link>
           </div>
         )}
 

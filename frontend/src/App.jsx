@@ -22,6 +22,7 @@ import AdminMessages from './pages/admin/AdminMessages';
 import ImportMessages from './pages/admin/ImportMessages';
 import WhatsAppSettings from './pages/admin/WhatsAppSettings';
 import TwilioSync from './pages/admin/TwilioSync';
+import LowBalanceAlerts from './pages/admin/LowBalanceAlerts';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -221,6 +222,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <TwilioSync />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/low-balance-alerts"
+        element={
+          <ProtectedRoute adminOnly>
+            <LowBalanceAlerts />
           </ProtectedRoute>
         }
       />

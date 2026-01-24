@@ -28,3 +28,9 @@ npm-debug.log*
 
 # Razorpay keys (NEVER commit!)
 rzp-key.csv
+
+# Claude settings (may contain secrets)
+.claude/settings.local.json
+
+# SMS logs with account IDs
+sms-log-*.csv

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
@@ -9,6 +9,7 @@ from .. import models, schemas
 from ..database import get_db
 from ..auth import get_current_user
 from ..config import settings
+from ..email_utils import check_and_send_low_balance_alert
 
 # Twilio configuration - set these in Railway environment variables
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -34,6 +35,7 @@ def get_message_price(message_type: str, db: Session) -> int:
 @router.post("/send", response_model=schemas.MessageResponse)
 async def send_message(
     message: schemas.MessageCreate,
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -105,6 +107,9 @@ async def send_message(
             description=f"{message.message_type.capitalize()} message to {message.recipient_phone}"
         )
         db.add(transaction)
+
+        # Check for low balance and send alert in background
+        background_tasks.add_task(check_and_send_low_balance_alert, current_user)
 
     db.commit()
     db.refresh(db_message)
