@@ -72,11 +72,12 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between p-4 border-b">
+        {/* Sidebar Header - Fixed */}
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
             <img
               src="/Dashbord_logo.png"
@@ -92,7 +93,8 @@ export default function Layout({ children }) {
           </button>
         </div>
 
-        <nav className="p-4 space-y-1">
+        {/* Scrollable Nav Section */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -114,7 +116,8 @@ export default function Layout({ children }) {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+        {/* Sidebar Footer - Fixed */}
+        <div className="flex-shrink-0 p-4 border-t bg-white">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
               <span className="text-blue-600 font-medium">
