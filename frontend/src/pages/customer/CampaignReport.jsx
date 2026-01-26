@@ -12,7 +12,7 @@ import {
   Filter
 } from 'lucide-react';
 
-export default function CampaignOverview() {
+export default function CampaignReport() {
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -41,7 +41,7 @@ export default function CampaignOverview() {
         end_date: `${dateRange.endDate}T${timeRange.endTime}:00`
       };
 
-      const response = await api.get('/admin/campaign-overview', { params });
+      const response = await api.get('/messages/campaign-overview', { params });
       setStats(response.data);
     } catch (error) {
       console.error('Failed to fetch campaign stats:', error);
@@ -83,7 +83,7 @@ export default function CampaignOverview() {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `campaign-overview-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `campaign-report-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
   };
 
@@ -109,7 +109,7 @@ export default function CampaignOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campaign Overview</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
           <p className="text-gray-500 text-sm mt-1">Monitor your WhatsApp message delivery status</p>
         </div>
         <div className="flex gap-2">
@@ -119,7 +119,7 @@ export default function CampaignOverview() {
             className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition text-sm font-medium"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh Report
+            Refresh
           </button>
           <button
             onClick={handleExport}

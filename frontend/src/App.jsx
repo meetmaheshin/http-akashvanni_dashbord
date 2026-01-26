@@ -13,6 +13,7 @@ import Profile from './pages/customer/Profile';
 import Invoices from './pages/customer/Invoices';
 import WhatsAppConnect from './pages/customer/WhatsAppConnect';
 import Templates from './pages/customer/Templates';
+import CampaignReport from './pages/customer/CampaignReport';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Customers from './pages/admin/Customers';
 import Pricing from './pages/admin/Pricing';
@@ -149,6 +150,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Templates />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/campaigns"
+        element={
+          <ProtectedRoute>
+            <CampaignReport />
           </ProtectedRoute>
         }
       />

@@ -28,6 +28,7 @@ const customerNavItems = [
   { name: 'WhatsApp', path: '/whatsapp-connect', icon: Smartphone },
   { name: 'Templates', path: '/templates', icon: LayoutTemplate },
   { name: 'Messages', path: '/messages', icon: MessageSquare },
+  { name: 'Reports', path: '/campaigns', icon: Megaphone },
   { name: 'Transactions', path: '/transactions', icon: History },
   { name: 'Invoices', path: '/invoices', icon: FileText },
   { name: 'Add Money', path: '/add-money', icon: CreditCard },
