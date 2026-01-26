@@ -132,79 +132,6 @@ async def send_message(
         error_message=db_message.error_message
     )
 
-@router.get("/{message_id}", response_model=schemas.MessageResponse)
-def get_message(
-    message_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    message = db.query(models.Message).filter(
-        models.Message.id == message_id,
-        models.Message.user_id == current_user.id
-    ).first()
-
-    if not message:
-        raise HTTPException(status_code=404, detail="Message not found")
-
-    return schemas.MessageResponse(
-        id=message.id,
-        user_id=message.user_id,
-        recipient_phone=message.recipient_phone,
-        recipient_name=message.recipient_name,
-        message_type=message.message_type,
-        template_name=message.template_name,
-        message_content=message.message_content,
-        status=message.status,
-        direction=message.direction or "outbound",
-        whatsapp_message_id=message.whatsapp_message_id,
-        cost=message.cost,
-        cost_rupees=message.cost / 100,
-        created_at=message.created_at,
-        sent_at=message.sent_at,
-        delivered_at=message.delivered_at,
-        read_at=message.read_at,
-        error_message=message.error_message
-    )
-
-# Webhook for WhatsApp status updates
-@router.post("/webhook/status")
-async def message_status_webhook(
-    request_data: dict,
-    db: Session = Depends(get_db)
-):
-    """
-    Webhook to receive message status updates from WhatsApp API
-    Adjust this based on your WhatsApp provider's webhook format
-    """
-    message_id = request_data.get("message_id")
-    status = request_data.get("status")
-
-    if not message_id or not status:
-        raise HTTPException(status_code=400, detail="Invalid webhook data")
-
-    message = db.query(models.Message).filter(
-        models.Message.whatsapp_message_id == message_id
-    ).first()
-
-    if not message:
-        return {"status": "message not found"}
-
-    now = datetime.utcnow()
-
-    if status == "delivered":
-        message.status = "delivered"
-        message.delivered_at = now
-    elif status == "read":
-        message.status = "read"
-        message.read_at = now
-    elif status == "failed":
-        message.status = "failed"
-        message.error_message = request_data.get("error", "Unknown error")
-
-    db.commit()
-
-    return {"status": "updated"}
-
 @router.get("/campaign-overview")
 def get_campaign_overview(
     start_date: str = Query(..., description="Start date in ISO format (YYYY-MM-DDTHH:MM:SS)"),
@@ -232,7 +159,7 @@ def get_campaign_overview(
 
     # Calculate statistics
     total_messages = len(messages)
-    
+
     if total_messages == 0:
         return {
             "total_messages": 0,
@@ -306,3 +233,76 @@ def get_campaign_overview(
             "end": end_date
         }
     }
+
+@router.get("/{message_id}", response_model=schemas.MessageResponse)
+def get_message(
+    message_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    message = db.query(models.Message).filter(
+        models.Message.id == message_id,
+        models.Message.user_id == current_user.id
+    ).first()
+
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    return schemas.MessageResponse(
+        id=message.id,
+        user_id=message.user_id,
+        recipient_phone=message.recipient_phone,
+        recipient_name=message.recipient_name,
+        message_type=message.message_type,
+        template_name=message.template_name,
+        message_content=message.message_content,
+        status=message.status,
+        direction=message.direction or "outbound",
+        whatsapp_message_id=message.whatsapp_message_id,
+        cost=message.cost,
+        cost_rupees=message.cost / 100,
+        created_at=message.created_at,
+        sent_at=message.sent_at,
+        delivered_at=message.delivered_at,
+        read_at=message.read_at,
+        error_message=message.error_message
+    )
+
+# Webhook for WhatsApp status updates
+@router.post("/webhook/status")
+async def message_status_webhook(
+    request_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Webhook to receive message status updates from WhatsApp API
+    Adjust this based on your WhatsApp provider's webhook format
+    """
+    message_id = request_data.get("message_id")
+    status = request_data.get("status")
+
+    if not message_id or not status:
+        raise HTTPException(status_code=400, detail="Invalid webhook data")
+
+    message = db.query(models.Message).filter(
+        models.Message.whatsapp_message_id == message_id
+    ).first()
+
+    if not message:
+        return {"status": "message not found"}
+
+    now = datetime.utcnow()
+
+    if status == "delivered":
+        message.status = "delivered"
+        message.delivered_at = now
+    elif status == "read":
+        message.status = "read"
+        message.read_at = now
+    elif status == "failed":
+        message.status = "failed"
+        message.error_message = request_data.get("error", "Unknown error")
+
+    db.commit()
+
+    return {"status": "updated"}
