@@ -1893,11 +1893,7 @@ def create_public_customer(
     if existing:
         raise HTTPException(status_code=400, detail="Phone number already registered")
 
-    # Verify user_id if provided
-    if customer.user_id:
-        user = db.query(models.User).filter(models.User.id == customer.user_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+    # Note: user_id is not validated - admin can enter any ID for manual mapping later
 
     new_customer = models.PublicCustomer(
         phone=phone,
@@ -1930,11 +1926,7 @@ def update_public_customer(
     if update.name is not None:
         customer.name = update.name
     if update.user_id is not None:
-        # Verify user exists
-        if update.user_id > 0:
-            user = db.query(models.User).filter(models.User.id == update.user_id).first()
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
+        # No validation - admin can enter any ID for manual mapping
         customer.user_id = update.user_id if update.user_id > 0 else None
     if update.notes is not None:
         customer.notes = update.notes
