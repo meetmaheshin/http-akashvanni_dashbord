@@ -454,28 +454,17 @@ export default function PublicCustomers() {
               </div>
 
               <div>
-                <label className="label">User ID (Optional)</label>
+                <label className="label">User ID (Optional - for mapping)</label>
                 <input
                   type="number"
                   value={formData.user_id}
                   onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
                   className="input"
-                  placeholder="Enter User ID to link"
+                  placeholder="Enter User ID to link payments"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  If linked, portal payments will auto-credit to this user
+                  If linked, portal payments will auto-credit to this user account
                 </p>
-                {formData.user_id && (
-                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                    {registeredUsers.find(u => u.id === parseInt(formData.user_id)) ? (
-                      <span className="text-green-600">
-                        ✓ Found: {registeredUsers.find(u => u.id === parseInt(formData.user_id))?.name}
-                      </span>
-                    ) : (
-                      <span className="text-amber-600">⚠ User ID not found in first 100 customers</span>
-                    )}
-                  </div>
-                )}
               </div>
 
               <div>
