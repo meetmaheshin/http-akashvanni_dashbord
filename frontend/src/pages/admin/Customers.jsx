@@ -34,6 +34,7 @@ export default function Customers() {
     phone: '',
     company_name: '',
     portal_enabled: false,
+    portal_user_id: '',
     initial_balance: 0
   });
   const [createdPassword, setCreatedPassword] = useState('');
@@ -90,6 +91,7 @@ export default function Customers() {
     try {
       const res = await api.post('/admin/customers', {
         ...newCustomer,
+        portal_user_id: newCustomer.portal_user_id ? parseInt(newCustomer.portal_user_id) : null,
         initial_balance: (newCustomer.initial_balance || 0) * 100 // Convert to paise
       });
       toast.success('Customer created successfully');
@@ -110,6 +112,7 @@ export default function Customers() {
       phone: '',
       company_name: '',
       portal_enabled: false,
+      portal_user_id: '',
       initial_balance: 0
     });
     setCreatedPassword('');
@@ -506,6 +509,17 @@ export default function Customers() {
                       onChange={(e) => setNewCustomer({ ...newCustomer, initial_balance: parseInt(e.target.value) || 0 })}
                       className="input"
                       placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Portal User ID</label>
+                    <input
+                      type="number"
+                      value={newCustomer.portal_user_id}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, portal_user_id: e.target.value })}
+                      className="input"
+                      placeholder="Custom numeric ID (optional)"
                     />
                   </div>
 

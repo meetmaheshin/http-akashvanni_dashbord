@@ -59,6 +59,7 @@ class UserResponse(UserBase):
     balance: int  # in paise
     is_active: bool
     portal_enabled: bool = False  # Can use portal recharge without login
+    portal_user_id: Optional[int] = None  # Custom numeric ID for portal tracking
     created_at: datetime
     gst_number: Optional[str] = None
     billing_address: Optional[str] = None
@@ -86,6 +87,7 @@ class UserWithBalance(UserResponse):
             balance_rupees=user.balance / 100,
             is_active=user.is_active,
             portal_enabled=user.portal_enabled or False,
+            portal_user_id=user.portal_user_id,
             created_at=user.created_at,
             gst_number=user.gst_number,
             billing_address=user.billing_address,
@@ -245,6 +247,7 @@ class AdminUserCreate(BaseModel):
     company_name: Optional[str] = None
     password: Optional[str] = None  # If not provided, generate random
     portal_enabled: bool = False
+    portal_user_id: Optional[int] = None  # Custom numeric ID for portal tracking
     initial_balance: Optional[int] = 0  # in paise
 
 # API Config schemas

@@ -65,6 +65,7 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
     portal_enabled = Column(Boolean, default=False)  # Can use portal recharge without login
+    portal_user_id = Column(Integer, nullable=True)  # Custom numeric ID for portal tracking
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

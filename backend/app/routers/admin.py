@@ -123,6 +123,7 @@ def create_customer(
         hashed_password=get_password_hash(password),
         role="customer",
         portal_enabled=customer.portal_enabled,
+        portal_user_id=customer.portal_user_id,
         balance=customer.initial_balance or 0,
         is_active=True
     )
