@@ -153,7 +153,8 @@ def public_find_customer(
         "name": user.name,
         "phone": user.phone,
         "user_id": user.id,
-        "balance": user.balance
+        "email": user.email,
+        "portal_user_id": user.portal_user_id
     }
 
 

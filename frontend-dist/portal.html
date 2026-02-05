@@ -135,8 +135,9 @@
               <p class="text-sm text-gray-600">Customer ID: <span id="customer-id">-</span></p>
             </div>
           </div>
-          <div id="balance-info" class="mt-3 pt-3 border-t border-green-200 hidden">
-            <p class="text-sm text-green-700">Current Balance: <span id="customer-balance" class="font-bold">₹0.00</span></p>
+          <div id="extra-info" class="mt-3 pt-3 border-t border-green-200 hidden">
+            <p class="text-sm text-gray-600">Email: <span id="customer-email" class="font-medium text-gray-800">-</span></p>
+            <p class="text-sm text-gray-600 mt-1">Portal User ID: <span id="customer-portal-id" class="font-medium text-gray-800">-</span></p>
           </div>
         </div>
 
@@ -305,13 +306,10 @@
         document.getElementById('customer-id').textContent = `#${data.id}`;
         document.getElementById('customer-info').classList.remove('hidden');
 
-        // Show balance if user is mapped
-        if (data.balance !== null) {
-          document.getElementById('customer-balance').textContent = `₹${(data.balance / 100).toFixed(2)}`;
-          document.getElementById('balance-info').classList.remove('hidden');
-        } else {
-          document.getElementById('balance-info').classList.add('hidden');
-        }
+        // Show email and portal_user_id
+        document.getElementById('customer-email').textContent = data.email || '-';
+        document.getElementById('customer-portal-id').textContent = data.portal_user_id || '-';
+        document.getElementById('extra-info').classList.remove('hidden');
 
         document.getElementById('amount-section').classList.remove('hidden');
 
@@ -509,6 +507,7 @@
       document.getElementById('wallet-amount-input').value = '';
       document.getElementById('wallet-calc-result').classList.add('hidden');
       document.getElementById('customer-info').classList.add('hidden');
+      document.getElementById('extra-info').classList.add('hidden');
       document.getElementById('amount-section').classList.add('hidden');
       document.getElementById('success-section').classList.add('hidden');
       document.getElementById('phone-error').classList.add('hidden');
