@@ -39,7 +39,6 @@ const customerNavItems = [
 const adminNavItems = [
   { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
   { name: 'Customers', path: '/admin/customers', icon: Users },
-  { name: 'Portal Customers', path: '/admin/portal-customers', icon: Globe },
   { name: 'Campaigns', path: '/admin/campaigns', icon: Megaphone },
   { name: 'Transactions', path: '/admin/transactions', icon: History },
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare },

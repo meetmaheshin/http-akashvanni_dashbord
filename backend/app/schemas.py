@@ -58,6 +58,7 @@ class UserResponse(UserBase):
     role: str
     balance: int  # in paise
     is_active: bool
+    portal_enabled: bool = False  # Can use portal recharge without login
     created_at: datetime
     gst_number: Optional[str] = None
     billing_address: Optional[str] = None
@@ -84,6 +85,7 @@ class UserWithBalance(UserResponse):
             balance=user.balance,
             balance_rupees=user.balance / 100,
             is_active=user.is_active,
+            portal_enabled=user.portal_enabled or False,
             created_at=user.created_at,
             gst_number=user.gst_number,
             billing_address=user.billing_address,
@@ -231,6 +233,8 @@ class AdminDashboardStats(BaseModel):
 
 class AdminUserUpdate(BaseModel):
     is_active: Optional[bool] = None
+    portal_enabled: Optional[bool] = None  # Allow portal recharge without login
+    phone: Optional[str] = None  # Phone number for portal lookup
     balance_adjustment: Optional[int] = None  # in paise, positive to add, negative to deduct
     adjustment_reason: Optional[str] = None
 

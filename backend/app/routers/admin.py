@@ -172,6 +172,16 @@ def update_customer(
     if update_data.is_active is not None:
         user.is_active = update_data.is_active
 
+    if update_data.portal_enabled is not None:
+        user.portal_enabled = update_data.portal_enabled
+
+    if update_data.phone is not None:
+        # Clean phone number
+        phone = ''.join(filter(str.isdigit, update_data.phone))
+        if len(phone) == 12 and phone.startswith('91'):
+            phone = phone[2:]
+        user.phone = phone
+
     if update_data.balance_adjustment:
         # Create a transaction for the adjustment
         transaction = models.Transaction(
@@ -197,9 +207,11 @@ def update_customer(
             "id": user.id,
             "email": user.email,
             "name": user.name,
+            "phone": user.phone,
             "balance": user.balance,
             "balance_rupees": user.balance / 100,
-            "is_active": user.is_active
+            "is_active": user.is_active,
+            "portal_enabled": user.portal_enabled
         }
     }
 

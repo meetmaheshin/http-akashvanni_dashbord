@@ -50,12 +50,13 @@ export default function PublicCustomers() {
     setLoading(true);
     try {
       const [customersRes, paymentsRes, usersRes] = await Promise.all([
-        api.get('/admin/public-customers').catch(() => ({ data: [] })),
-        api.get('/admin/public-payments').catch(() => ({ data: [] })),
+        api.get('/admin/public-customers').catch(() => ({ data: { customers: [] } })),
+        api.get('/admin/public-payments').catch(() => ({ data: { payments: [] } })),
         api.get('/admin/customers?limit=100').catch(() => ({ data: [] }))
       ]);
-      setCustomers(Array.isArray(customersRes.data) ? customersRes.data : []);
-      setPayments(Array.isArray(paymentsRes.data) ? paymentsRes.data : []);
+      // API returns {total, customers: [...]} and {total, payments: [...]}
+      setCustomers(customersRes.data?.customers || []);
+      setPayments(paymentsRes.data?.payments || []);
       setRegisteredUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);

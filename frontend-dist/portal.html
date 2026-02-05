@@ -155,13 +155,35 @@
           </div>
 
           <!-- Custom Amount -->
-          <div class="mb-6">
+          <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Or enter custom amount</label>
             <div class="relative">
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
               <input type="number" id="amount-input" placeholder="Enter amount" min="1"
                 class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-whatsapp focus:border-whatsapp outline-none">
             </div>
+          </div>
+
+          <!-- Wallet Calculator -->
+          <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-sm font-semibold text-blue-800">Want exact balance in wallet?</span>
+            </div>
+            <p class="text-xs text-blue-600 mb-3">Enter desired wallet amount and we'll calculate payment (includes 18% GST)</p>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                <input type="number" id="wallet-amount-input" placeholder="Desired wallet balance" min="1"
+                  class="w-full pl-7 pr-3 py-2 text-sm border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              </div>
+              <button onclick="calculateFromWallet()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                Calculate
+              </button>
+            </div>
+            <p id="wallet-calc-result" class="hidden mt-2 text-sm text-blue-700 font-medium"></p>
           </div>
 
           <!-- GST Breakdown -->
@@ -333,6 +355,35 @@
       }
     }
 
+    function calculateFromWallet() {
+      const walletInput = document.getElementById('wallet-amount-input');
+      const resultEl = document.getElementById('wallet-calc-result');
+      const desiredWallet = parseFloat(walletInput.value) || 0;
+
+      if (desiredWallet <= 0) {
+        resultEl.textContent = 'Please enter a valid amount';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+
+      // Calculate payment amount: wallet_amount * 1.18 (add 18% GST)
+      const paymentAmount = Math.ceil(desiredWallet * 1.18);
+
+      // Set the payment amount in the main input
+      document.getElementById('amount-input').value = paymentAmount;
+      selectedAmount = paymentAmount;
+      updateGstBreakdown(paymentAmount);
+
+      // Clear preset button selections
+      document.querySelectorAll('.amount-btn').forEach(btn => {
+        btn.classList.remove('bg-whatsapp', 'text-white');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+      });
+
+      resultEl.innerHTML = `Pay <strong>₹${paymentAmount}</strong> to get <strong>₹${desiredWallet.toFixed(2)}</strong> in wallet`;
+      resultEl.classList.remove('hidden');
+    }
+
     document.getElementById('amount-input').addEventListener('input', (e) => {
       const amount = parseInt(e.target.value) || 0;
       selectedAmount = amount;
@@ -455,6 +506,8 @@
     function resetForm() {
       document.getElementById('phone-input').value = '';
       document.getElementById('amount-input').value = '';
+      document.getElementById('wallet-amount-input').value = '';
+      document.getElementById('wallet-calc-result').classList.add('hidden');
       document.getElementById('customer-info').classList.add('hidden');
       document.getElementById('amount-section').classList.add('hidden');
       document.getElementById('success-section').classList.add('hidden');

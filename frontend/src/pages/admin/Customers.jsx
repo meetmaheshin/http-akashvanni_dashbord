@@ -11,7 +11,9 @@ import {
   Edit,
   X,
   Check,
-  LogIn
+  LogIn,
+  Globe,
+  Phone
 } from 'lucide-react';
 
 export default function Customers() {
@@ -50,6 +52,18 @@ export default function Customers() {
       fetchCustomers();
     } catch (error) {
       toast.error('Failed to update customer');
+    }
+  };
+
+  const togglePortal = async (customer) => {
+    try {
+      await api.put(`/admin/customers/${customer.id}`, {
+        portal_enabled: !customer.portal_enabled,
+      });
+      toast.success(`Portal ${customer.portal_enabled ? 'disabled' : 'enabled'} for ${customer.name}`);
+      fetchCustomers();
+    } catch (error) {
+      toast.error('Failed to update portal status');
     }
   };
 
@@ -154,6 +168,7 @@ export default function Customers() {
                   <th className="pb-3 font-medium">Phone</th>
                   <th className="pb-3 font-medium">Balance</th>
                   <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Portal</th>
                   <th className="pb-3 font-medium">Joined</th>
                   <th className="pb-3 font-medium">Actions</th>
                 </tr>
@@ -170,7 +185,16 @@ export default function Customers() {
                         )}
                       </div>
                     </td>
-                    <td className="py-4 text-gray-600">{customer.phone || '-'}</td>
+                    <td className="py-4">
+                      {customer.phone ? (
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3 text-gray-400" />
+                          <span className="text-gray-600">{customer.phone}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No phone</span>
+                      )}
+                    </td>
                     <td className="py-4">
                       <span className="font-semibold text-gray-900">
                         ₹{(customer.balance / 100).toFixed(2)}
@@ -186,6 +210,20 @@ export default function Customers() {
                       >
                         {customer.is_active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="py-4">
+                      <button
+                        onClick={() => togglePortal(customer)}
+                        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full transition-colors ${
+                          customer.portal_enabled
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                        title={customer.portal_enabled ? 'Click to disable portal' : 'Click to enable portal'}
+                      >
+                        <Globe className="h-3 w-3" />
+                        {customer.portal_enabled ? 'Enabled' : 'Disabled'}
+                      </button>
                     </td>
                     <td className="py-4 text-gray-500 text-sm">
                       {new Date(customer.created_at).toLocaleDateString()}
