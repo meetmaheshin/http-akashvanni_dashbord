@@ -91,7 +91,7 @@ export default function Customers() {
     try {
       const res = await api.post('/admin/customers', {
         ...newCustomer,
-        portal_user_id: newCustomer.portal_user_id ? parseInt(newCustomer.portal_user_id) : null,
+        portal_user_id: newCustomer.portal_user_id || null,
         initial_balance: (newCustomer.initial_balance || 0) * 100 // Convert to paise
       });
       toast.success('Customer created successfully');
@@ -515,11 +515,11 @@ export default function Customers() {
                   <div>
                     <label className="label">Portal User ID</label>
                     <input
-                      type="number"
+                      type="text"
                       value={newCustomer.portal_user_id}
                       onChange={(e) => setNewCustomer({ ...newCustomer, portal_user_id: e.target.value })}
                       className="input"
-                      placeholder="Custom numeric ID (optional)"
+                      placeholder="Custom ID (optional)"
                     />
                   </div>
 
