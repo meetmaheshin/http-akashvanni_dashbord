@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Text
+from sqlalchemy import Column, Integer, BigInteger, String, Float, Boolean, DateTime, ForeignKey, Enum, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -65,7 +65,7 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
     portal_enabled = Column(Boolean, default=False)  # Can use portal recharge without login
-    portal_user_id = Column(Integer, nullable=True)  # Custom numeric ID for portal tracking
+    portal_user_id = Column(BigInteger, nullable=True)  # Custom numeric ID for portal tracking (BigInteger for phone numbers)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
