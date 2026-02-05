@@ -13,7 +13,9 @@ import {
   Check,
   LogIn,
   Globe,
-  Phone
+  Phone,
+  Plus,
+  Copy
 } from 'lucide-react';
 
 export default function Customers() {
@@ -24,7 +26,18 @@ export default function Customers() {
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [impersonating, setImpersonating] = useState(null);
+  const [newCustomer, setNewCustomer] = useState({
+    email: '',
+    name: '',
+    phone: '',
+    company_name: '',
+    portal_enabled: false,
+    initial_balance: 0
+  });
+  const [createdPassword, setCreatedPassword] = useState('');
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const { setImpersonationMode } = useAuth();
 
@@ -65,6 +78,47 @@ export default function Customers() {
     } catch (error) {
       toast.error('Failed to update portal status');
     }
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.email || !newCustomer.name) {
+      toast.error('Email and name are required');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await api.post('/admin/customers', {
+        ...newCustomer,
+        initial_balance: (newCustomer.initial_balance || 0) * 100 // Convert to paise
+      });
+      toast.success('Customer created successfully');
+      setCreatedPassword(res.data.password);
+      fetchCustomers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create customer');
+      setShowAddModal(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const resetAddForm = () => {
+    setNewCustomer({
+      email: '',
+      name: '',
+      phone: '',
+      company_name: '',
+      portal_enabled: false,
+      initial_balance: 0
+    });
+    setCreatedPassword('');
+    setShowAddModal(false);
+  };
+
+  const copyPassword = () => {
+    navigator.clipboard.writeText(createdPassword);
+    toast.success('Password copied!');
   };
 
   const handleBalanceAdjustment = async () => {
@@ -135,9 +189,18 @@ export default function Customers() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-        <p className="text-gray-500">Manage your customer accounts</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+          <p className="text-gray-500">Manage your customer accounts</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Customer
+        </button>
       </div>
 
       {/* Search */}
@@ -340,6 +403,150 @@ export default function Customers() {
                 Apply
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Customer Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                {createdPassword ? 'Customer Created' : 'Add New Customer'}
+              </h3>
+              <button
+                onClick={resetAddForm}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {createdPassword ? (
+              <div>
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-700 font-medium mb-2">Customer created successfully!</p>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Share these login credentials with the customer:
+                  </p>
+                  <div className="bg-white p-3 rounded border">
+                    <p className="text-sm"><strong>Email:</strong> {newCustomer.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm"><strong>Password:</strong> {createdPassword}</p>
+                      <button
+                        onClick={copyPassword}
+                        className="p-1 hover:bg-gray-100 rounded"
+                        title="Copy password"
+                      >
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={resetAddForm}
+                  className="btn-primary w-full"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="label">Email *</label>
+                    <input
+                      type="email"
+                      value={newCustomer.email}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      className="input"
+                      placeholder="customer@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Name *</label>
+                    <input
+                      type="text"
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      className="input"
+                      placeholder="Customer name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Phone (for portal)</label>
+                    <input
+                      type="tel"
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      className="input"
+                      placeholder="10-digit phone number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Company Name</label>
+                    <input
+                      type="text"
+                      value={newCustomer.company_name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, company_name: e.target.value })}
+                      className="input"
+                      placeholder="Company name (optional)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Initial Balance (₹)</label>
+                    <input
+                      type="number"
+                      value={newCustomer.initial_balance}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, initial_balance: parseInt(e.target.value) || 0 })}
+                      className="input"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="portal_enabled"
+                      checked={newCustomer.portal_enabled}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, portal_enabled: e.target.checked })}
+                      className="rounded border-gray-300"
+                    />
+                    <label htmlFor="portal_enabled" className="text-sm text-gray-700">
+                      Enable portal recharge (requires phone number)
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={resetAddForm}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateCustomer}
+                    disabled={creating}
+                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                  >
+                    {creating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Customer'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

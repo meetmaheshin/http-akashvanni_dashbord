@@ -90,6 +90,59 @@ def get_customers(
     customers = query.order_by(models.User.created_at.desc()).offset(skip).limit(limit).all()
     return customers
 
+@router.post("/customers")
+def create_customer(
+    customer: schemas.AdminUserCreate,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new customer manually"""
+    from ..auth import get_password_hash
+    import secrets
+
+    # Check if email already exists
+    existing = db.query(models.User).filter(models.User.email == customer.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Clean phone number if provided
+    phone = None
+    if customer.phone:
+        phone = ''.join(filter(str.isdigit, customer.phone))
+        if len(phone) == 12 and phone.startswith('91'):
+            phone = phone[2:]
+
+    # Generate password if not provided
+    password = customer.password or secrets.token_urlsafe(8)
+
+    new_user = models.User(
+        email=customer.email,
+        name=customer.name,
+        phone=phone,
+        company_name=customer.company_name,
+        hashed_password=get_password_hash(password),
+        role="customer",
+        portal_enabled=customer.portal_enabled,
+        balance=customer.initial_balance or 0,
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "message": "Customer created successfully",
+        "customer": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "name": new_user.name,
+            "phone": new_user.phone,
+            "portal_enabled": new_user.portal_enabled,
+            "balance": new_user.balance
+        },
+        "password": password  # Return password so admin can share it
+    }
+
 @router.get("/customers/{user_id}", response_model=schemas.UserResponse)
 def get_customer(
     user_id: int,

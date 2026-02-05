@@ -238,6 +238,15 @@ class AdminUserUpdate(BaseModel):
     balance_adjustment: Optional[int] = None  # in paise, positive to add, negative to deduct
     adjustment_reason: Optional[str] = None
 
+class AdminUserCreate(BaseModel):
+    email: EmailStr
+    name: str
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    password: Optional[str] = None  # If not provided, generate random
+    portal_enabled: bool = False
+    initial_balance: Optional[int] = 0  # in paise
+
 # API Config schemas
 class APIConfigCreate(BaseModel):
     name: str
