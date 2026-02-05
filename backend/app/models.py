@@ -301,14 +301,11 @@ class PublicCustomer(Base):
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String(20), unique=True, index=True, nullable=False)  # Phone number for lookup
     name = Column(String(255), nullable=False)  # Customer name to display
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Mapped user (optional)
+    user_id = Column(Integer, nullable=True)  # Mapped user ID (no FK - allows any value for manual mapping)
     notes = Column(Text)  # Admin notes
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Relationship
-    user = relationship("User")
 
 
 # Public Payment Log (for payments made via portal)
