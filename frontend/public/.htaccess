@@ -1,3 +1,16 @@
+# Force HTTPS and redirect www to non-www
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Redirect HTTP to HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Redirect www to non-www
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+</IfModule>
+
 # Set proper MIME types for JavaScript modules
 <IfModule mod_mime.c>
   AddType application/javascript .js

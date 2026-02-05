@@ -1811,3 +1811,274 @@ def get_admin_campaign_overview(
         "avg_delivery_time": avg_delivery_time,
         "date_range": {"start": start_date, "end": end_date}
     }
+
+
+# ========== Public Customer Management (Portal Recharge) ==========
+
+class PublicCustomerCreate(BaseModel):
+    phone: str
+    name: str
+    user_id: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class PublicCustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    user_id: Optional[int] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+@router.get("/public-customers")
+def get_public_customers(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: str = Query(None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all public customer mappings for portal recharge"""
+    query = db.query(models.PublicCustomer)
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            (models.PublicCustomer.phone.ilike(search_filter)) |
+            (models.PublicCustomer.name.ilike(search_filter))
+        )
+
+    total = query.count()
+    customers = query.order_by(models.PublicCustomer.created_at.desc()).offset(skip).limit(limit).all()
+
+    result = []
+    for c in customers:
+        user = None
+        if c.user_id:
+            user = db.query(models.User).filter(models.User.id == c.user_id).first()
+
+        result.append({
+            "id": c.id,
+            "phone": c.phone,
+            "name": c.name,
+            "user_id": c.user_id,
+            "user_email": user.email if user else None,
+            "user_name": user.name if user else None,
+            "user_balance": user.balance / 100 if user else None,
+            "notes": c.notes,
+            "is_active": c.is_active,
+            "created_at": c.created_at,
+            "updated_at": c.updated_at
+        })
+
+    return {"total": total, "customers": result}
+
+
+@router.post("/public-customers")
+def create_public_customer(
+    customer: PublicCustomerCreate,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new public customer mapping"""
+    # Clean phone number
+    phone = ''.join(filter(str.isdigit, customer.phone))
+    if len(phone) == 12 and phone.startswith('91'):
+        phone = phone[2:]
+
+    # Check if already exists
+    existing = db.query(models.PublicCustomer).filter(
+        models.PublicCustomer.phone == phone
+    ).first()
+
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    # Verify user_id if provided
+    if customer.user_id:
+        user = db.query(models.User).filter(models.User.id == customer.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+    new_customer = models.PublicCustomer(
+        phone=phone,
+        name=customer.name,
+        user_id=customer.user_id,
+        notes=customer.notes
+    )
+    db.add(new_customer)
+    db.commit()
+    db.refresh(new_customer)
+
+    return {"message": "Public customer created", "id": new_customer.id, "phone": phone}
+
+
+@router.put("/public-customers/{customer_id}")
+def update_public_customer(
+    customer_id: int,
+    update: PublicCustomerUpdate,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Update a public customer mapping"""
+    customer = db.query(models.PublicCustomer).filter(
+        models.PublicCustomer.id == customer_id
+    ).first()
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="Public customer not found")
+
+    if update.name is not None:
+        customer.name = update.name
+    if update.user_id is not None:
+        # Verify user exists
+        if update.user_id > 0:
+            user = db.query(models.User).filter(models.User.id == update.user_id).first()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+        customer.user_id = update.user_id if update.user_id > 0 else None
+    if update.notes is not None:
+        customer.notes = update.notes
+    if update.is_active is not None:
+        customer.is_active = update.is_active
+
+    db.commit()
+    db.refresh(customer)
+
+    return {"message": "Public customer updated", "id": customer.id}
+
+
+@router.delete("/public-customers/{customer_id}")
+def delete_public_customer(
+    customer_id: int,
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a public customer mapping"""
+    customer = db.query(models.PublicCustomer).filter(
+        models.PublicCustomer.id == customer_id
+    ).first()
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="Public customer not found")
+
+    db.delete(customer)
+    db.commit()
+
+    return {"message": "Public customer deleted"}
+
+
+# ========== Public Payments Management ==========
+
+@router.get("/public-payments")
+def get_public_payments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    status: str = Query(None),
+    processed: bool = Query(None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get all public portal payments"""
+    query = db.query(models.PublicPayment)
+
+    if status:
+        query = query.filter(models.PublicPayment.status == status)
+    if processed is not None:
+        query = query.filter(models.PublicPayment.processed == processed)
+
+    total = query.count()
+    payments = query.order_by(models.PublicPayment.created_at.desc()).offset(skip).limit(limit).all()
+
+    result = []
+    for p in payments:
+        result.append({
+            "id": p.id,
+            "phone": p.phone,
+            "customer_name": p.customer_name,
+            "public_customer_id": p.public_customer_id,
+            "user_id": p.user_id,
+            "amount": p.amount,
+            "amount_rupees": p.amount / 100,
+            "razorpay_order_id": p.razorpay_order_id,
+            "razorpay_payment_id": p.razorpay_payment_id,
+            "status": p.status,
+            "subtotal": p.subtotal,
+            "gst_amount": p.gst_amount,
+            "credited_amount": p.credited_amount,
+            "credited_rupees": p.credited_amount / 100 if p.credited_amount else None,
+            "processed": p.processed,
+            "processed_at": p.processed_at,
+            "admin_notes": p.admin_notes,
+            "created_at": p.created_at
+        })
+
+    return {"total": total, "payments": result}
+
+
+@router.post("/public-payments/{payment_id}/process")
+def process_public_payment(
+    payment_id: int,
+    user_id: int = Query(..., description="User ID to credit the balance to"),
+    admin_notes: str = Query(None),
+    admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually process a public payment - credit the amount to a user's wallet.
+    This is used when admin wants to credit a portal payment to a user account.
+    """
+    payment = db.query(models.PublicPayment).filter(
+        models.PublicPayment.id == payment_id
+    ).first()
+
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    if payment.processed:
+        raise HTTPException(status_code=400, detail="Payment already processed")
+
+    if payment.status != "completed":
+        raise HTTPException(status_code=400, detail="Payment is not completed")
+
+    # Get user
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Calculate GST (already in payment record)
+    credited_amount = payment.credited_amount or payment.subtotal or int(payment.amount / 1.18)
+
+    # Create transaction
+    transaction = models.Transaction(
+        user_id=user.id,
+        amount=credited_amount,
+        type="credit",
+        status="completed",
+        razorpay_order_id=payment.razorpay_order_id,
+        razorpay_payment_id=payment.razorpay_payment_id,
+        description=f"Portal Recharge from {payment.phone} (Admin processed)"
+    )
+    db.add(transaction)
+
+    # Update user balance
+    old_balance = user.balance
+    user.balance += credited_amount
+
+    # Mark payment as processed
+    payment.processed = True
+    payment.processed_at = datetime.utcnow()
+    payment.processed_by = admin.id
+    payment.user_id = user.id
+    payment.admin_notes = admin_notes
+
+    db.commit()
+
+    return {
+        "message": "Payment processed successfully",
+        "payment_id": payment.id,
+        "user_id": user.id,
+        "user_email": user.email,
+        "credited_amount": credited_amount / 100,
+        "old_balance": old_balance / 100,
+        "new_balance": user.balance / 100
+    }

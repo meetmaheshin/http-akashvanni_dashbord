@@ -1,0 +1,23 @@
+# Robots.txt for akashvanni.com
+# WhatsApp Business API Dashboard
+
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /ecommerce/
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /profile
+Disallow: /transactions
+Disallow: /messages
+Disallow: /invoices
+Disallow: /add-money
+Disallow: /templates
+Disallow: /campaigns
+Disallow: /whatsapp-connect
+
+# Sitemap location
+Sitemap: https://akashvanni.com/sitemap.xml
+
+# LLMs.txt location
+# https://akashvanni.com/llms.txt

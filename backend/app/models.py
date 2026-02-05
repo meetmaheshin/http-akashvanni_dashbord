@@ -292,3 +292,55 @@ class PaymentLog(Base):
 
     # Relationship
     user = relationship("User")
+
+
+# Public Customer Mapping (for portal recharge without login)
+class PublicCustomer(Base):
+    __tablename__ = "public_customers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    phone = Column(String(20), unique=True, index=True, nullable=False)  # Phone number for lookup
+    name = Column(String(255), nullable=False)  # Customer name to display
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Mapped user (optional)
+    notes = Column(Text)  # Admin notes
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationship
+    user = relationship("User")
+
+
+# Public Payment Log (for payments made via portal)
+class PublicPayment(Base):
+    __tablename__ = "public_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    phone = Column(String(20), index=True, nullable=False)
+    customer_name = Column(String(255))
+    public_customer_id = Column(Integer, ForeignKey("public_customers.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # If mapped
+
+    # Payment details
+    amount = Column(Integer, nullable=False)  # Amount in paise
+    razorpay_order_id = Column(String(255))
+    razorpay_payment_id = Column(String(255))
+    razorpay_signature = Column(String(255))
+    status = Column(String(20), default="pending")  # pending, completed, failed
+
+    # GST breakdown
+    subtotal = Column(Integer)
+    gst_amount = Column(Integer)
+    credited_amount = Column(Integer)
+
+    # Admin processing
+    processed = Column(Boolean, default=False)  # Has admin credited the user?
+    processed_at = Column(DateTime(timezone=True))
+    processed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    admin_notes = Column(Text)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    public_customer = relationship("PublicCustomer")
+    user = relationship("User", foreign_keys=[user_id])

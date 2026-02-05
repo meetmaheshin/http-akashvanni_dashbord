@@ -1,0 +1,67 @@
+# Akashvanni - WhatsApp Business API Dashboard
+# https://akashvanni.com
+
+## About
+Akashvanni is a WhatsApp Business API dashboard platform that helps businesses send WhatsApp messages at scale.
+The platform provides:
+- WhatsApp Business API integration via Twilio
+- Message templates management
+- Bulk messaging capabilities
+- Real-time delivery reports
+- Prepaid wallet system with Razorpay payments
+- GST-compliant invoicing
+
+## Target Users
+- Small and medium businesses in India
+- Marketing agencies
+- E-commerce stores
+- Service providers who need WhatsApp communication
+
+## Key Features
+1. **WhatsApp Integration**: Connect your WhatsApp Business Account via Twilio
+2. **Message Templates**: Create and manage approved WhatsApp message templates
+3. **Bulk Messaging**: Send messages to multiple recipients
+4. **Delivery Reports**: Track sent, delivered, read, and failed messages
+5. **Wallet System**: Prepaid balance with easy recharge via Razorpay
+6. **Invoices**: Automatic GST-compliant invoice generation
+7. **Campaign Reports**: Analytics on message delivery performance
+
+## Pricing
+- Pay-per-message model
+- No monthly subscription fees
+- Transparent pricing based on message type
+
+## API
+- Backend API: https://api.akashvanni.com
+- Authentication: JWT Bearer tokens
+- RESTful endpoints for all operations
+
+## Contact
+- Website: https://akashvanni.com
+- Support: admin@akashvanni.com
+
+## Technical Stack
+- Frontend: React + Vite + Tailwind CSS
+- Backend: FastAPI (Python)
+- Database: PostgreSQL
+- Payments: Razorpay
+- WhatsApp: Twilio API
+- Hosting: Hostinger (Frontend) + Railway (Backend)
+
+## Public Pages
+- / - Landing page with product information
+- /landing - Alternative landing page URL
+- /ecommerce/ - E-commerce focused landing page for abandoned cart recovery & WhatsApp automation
+- /login - User authentication
+- /register - New user registration
+
+## Protected Pages (Require Authentication)
+- /dashboard - Customer dashboard
+- /messages - Message history
+- /templates - WhatsApp templates
+- /campaigns - Campaign reports
+- /transactions - Payment history
+- /invoices - Invoice downloads
+- /add-money - Wallet recharge
+- /profile - User settings
+- /admin/* - Admin panel (admin users only)

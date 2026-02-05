@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Portal | Akashvanni</title>
+  <link rel="icon" type="image/png" href="https://akashvanni.com/site_logo.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            whatsapp: '#25D366',
+            'whatsapp-dark': '#128C7E',
+            primary: '#2563eb',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Razorpay -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .whatsapp-gradient { background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+    .btn-loading::after {
+      content: ''; display: inline-block; width: 16px; height: 16px; margin-left: 8px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="https://akashvanni.com" class="flex items-center gap-2">
+        <img src="https://akashvanni.com/site_logo.png" alt="Akashvanni" class="h-10 w-auto">
+        <span class="text-xl font-bold text-gray-900">Akashvanni</span>
+      </a>
+      <a href="https://wa.me/919643847397" target="_blank" class="text-whatsapp-dark hover:text-whatsapp font-medium flex items-center gap-2">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Need Help?
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-4xl mx-auto px-4 py-12">
+    <div class="text-center mb-10">
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Customer Portal</h1>
+      <p class="text-xl text-gray-600">What would you like to do today?</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-12">
+      <!-- Recharge Card -->
+      <div id="recharge-card" class="card-hover bg-white rounded-2xl p-8 shadow-lg cursor-pointer border-2 border-transparent hover:border-whatsapp" onclick="showRechargeSection()">
+        <div class="w-16 h-16 whatsapp-gradient rounded-2xl flex items-center justify-center mb-6">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-3">Recharge Your Account</h2>
+        <p class="text-gray-600 mb-4">Add balance to your WhatsApp messaging wallet using Razorpay.</p>
+        <div class="flex items-center text-whatsapp-dark font-semibold">
+          <span>Add Money Now</span>
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Dashboard Card -->
+      <a href="https://chat.akashvanni.com/" class="card-hover bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-blue-500">
+        <div class="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mb-6">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-3">Go to Dashboard</h2>
+        <p class="text-gray-600 mb-4">Access your WhatsApp automation dashboard. Manage campaigns and analytics.</p>
+        <div class="flex items-center text-blue-600 font-semibold">
+          <span>Open Dashboard</span>
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </div>
+      </a>
+    </div>
+
+    <!-- Recharge Section (Hidden by default) -->
+    <div id="recharge-section" class="hidden">
+      <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Add Money</h2>
+          <button onclick="hideRechargeSection()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Phone Input -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-xl">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Your WhatsApp Number</label>
+          <div class="flex gap-3">
+            <input type="tel" id="phone-input" placeholder="+91 98765 43210"
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-whatsapp focus:border-whatsapp outline-none">
+            <button onclick="findCustomer()" id="find-btn" class="px-6 py-3 whatsapp-gradient text-white font-semibold rounded-xl hover:opacity-90">
+              Find
+            </button>
+          </div>
+          <div id="phone-error" class="hidden mt-2 text-red-600 text-sm"></div>
+        </div>
+
+        <!-- Customer Info (shown after finding) -->
+        <div id="customer-info" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-900" id="customer-name">-</p>
+              <p class="text-sm text-gray-600">Customer ID: <span id="customer-id">-</span></p>
+            </div>
+          </div>
+          <div id="balance-info" class="mt-3 pt-3 border-t border-green-200 hidden">
+            <p class="text-sm text-green-700">Current Balance: <span id="customer-balance" class="font-bold">₹0.00</span></p>
+          </div>
+        </div>
+
+        <!-- Amount Section (shown after finding customer) -->
+        <div id="amount-section" class="hidden">
+          <h3 class="font-semibold text-gray-900 mb-4">Select Amount</h3>
+
+          <!-- Preset Amounts -->
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <button onclick="selectAmount(100)" class="amount-btn py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-whatsapp hover:text-white transition">₹100</button>
+            <button onclick="selectAmount(200)" class="amount-btn py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-whatsapp hover:text-white transition">₹200</button>
+            <button onclick="selectAmount(500)" class="amount-btn py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-whatsapp hover:text-white transition">₹500</button>
+            <button onclick="selectAmount(1000)" class="amount-btn py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-whatsapp hover:text-white transition">₹1000</button>
+            <button onclick="selectAmount(2000)" class="amount-btn py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-whatsapp hover:text-white transition">₹2000</button>
+            <button onclick="selectAmount(5000)" class="amount-btn py-3 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-whatsapp hover:text-white transition">₹5000</button>
+          </div>
+
+          <!-- Custom Amount -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Or enter custom amount</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+              <input type="number" id="amount-input" placeholder="Enter amount" min="1"
+                class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-whatsapp focus:border-whatsapp outline-none">
+            </div>
+          </div>
+
+          <!-- GST Breakdown -->
+          <div id="gst-breakdown" class="hidden mb-6 p-4 bg-gray-50 rounded-xl">
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600">Service Amount</span>
+              <span id="subtotal-amount" class="font-medium">₹0.00</span>
+            </div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-gray-600">GST (18%)</span>
+              <span id="gst-amount" class="font-medium">₹0.00</span>
+            </div>
+            <div class="flex justify-between text-sm pt-2 border-t border-gray-200">
+              <span class="text-gray-900 font-medium">Total Payment</span>
+              <span id="total-amount" class="font-bold">₹0.00</span>
+            </div>
+            <div class="flex justify-between text-sm text-green-600 mt-1">
+              <span class="font-medium">Wallet Credit</span>
+              <span id="credit-amount" class="font-bold">₹0.00</span>
+            </div>
+          </div>
+
+          <div id="amount-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm"></div>
+
+          <!-- Pay Button -->
+          <button onclick="processPayment()" id="pay-btn" class="w-full whatsapp-gradient text-white font-bold py-4 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+            </svg>
+            <span>Pay Now</span>
+          </button>
+
+          <p class="text-xs text-gray-400 text-center mt-4">Secure payment powered by Razorpay</p>
+        </div>
+
+        <!-- Success Message -->
+        <div id="success-section" class="hidden text-center py-8">
+          <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
+          <p class="text-gray-600 mb-4" id="success-message">Your payment has been received.</p>
+          <button onclick="resetForm()" class="px-8 py-3 whatsapp-gradient text-white font-semibold rounded-xl hover:opacity-90">
+            Make Another Payment
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Text -->
+    <div class="mt-8 text-center">
+      <p class="text-gray-500">
+        Need to register?
+        <a href="https://wa.me/919643847397?text=Hi%20I%20want%20to%20register%20for%20WhatsApp%20API" target="_blank" class="text-whatsapp-dark hover:underline font-medium">Contact us on WhatsApp</a>
+      </p>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = 'https://api.akashvanni.com';
+    let currentCustomer = null;
+    let selectedAmount = 0;
+
+    function showRechargeSection() {
+      document.getElementById('recharge-section').classList.remove('hidden');
+      document.getElementById('recharge-card').classList.add('hidden');
+      document.getElementById('phone-input').focus();
+    }
+
+    function hideRechargeSection() {
+      document.getElementById('recharge-section').classList.add('hidden');
+      document.getElementById('recharge-card').classList.remove('hidden');
+      resetForm();
+    }
+
+    function cleanPhoneNumber(phone) {
+      let cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length === 12 && cleaned.startsWith('91')) {
+        cleaned = cleaned.substring(2);
+      }
+      return cleaned;
+    }
+
+    async function findCustomer() {
+      const phone = document.getElementById('phone-input').value.trim();
+      const errorDiv = document.getElementById('phone-error');
+      const btn = document.getElementById('find-btn');
+
+      errorDiv.classList.add('hidden');
+      const cleanedPhone = cleanPhoneNumber(phone);
+
+      if (cleanedPhone.length !== 10) {
+        errorDiv.textContent = 'Please enter a valid 10-digit phone number';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('btn-loading');
+      btn.textContent = 'Finding...';
+
+      try {
+        const response = await fetch(`${API_BASE}/payments/public/find-customer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanedPhone })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Customer not found');
+        }
+
+        currentCustomer = data;
+        document.getElementById('customer-name').textContent = data.name;
+        document.getElementById('customer-id').textContent = `#${data.id}`;
+        document.getElementById('customer-info').classList.remove('hidden');
+
+        // Show balance if user is mapped
+        if (data.balance !== null) {
+          document.getElementById('customer-balance').textContent = `₹${(data.balance / 100).toFixed(2)}`;
+          document.getElementById('balance-info').classList.remove('hidden');
+        } else {
+          document.getElementById('balance-info').classList.add('hidden');
+        }
+
+        document.getElementById('amount-section').classList.remove('hidden');
+
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Customer not found. Please contact support.';
+        errorDiv.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+        btn.textContent = 'Find';
+      }
+    }
+
+    function selectAmount(amount) {
+      document.getElementById('amount-input').value = amount;
+      selectedAmount = amount;
+      updateGstBreakdown(amount);
+
+      document.querySelectorAll('.amount-btn').forEach(btn => {
+        btn.classList.remove('bg-whatsapp', 'text-white');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+      });
+      event.target.classList.remove('bg-gray-100', 'text-gray-700');
+      event.target.classList.add('bg-whatsapp', 'text-white');
+    }
+
+    function updateGstBreakdown(amount) {
+      const breakdown = document.getElementById('gst-breakdown');
+      if (amount && amount > 0) {
+        const totalPaise = amount * 100;
+        const subtotal = Math.round(totalPaise / 1.18);
+        const gst = totalPaise - subtotal;
+
+        document.getElementById('subtotal-amount').textContent = `₹${(subtotal / 100).toFixed(2)}`;
+        document.getElementById('gst-amount').textContent = `₹${(gst / 100).toFixed(2)}`;
+        document.getElementById('total-amount').textContent = `₹${amount.toFixed(2)}`;
+        document.getElementById('credit-amount').textContent = `₹${(subtotal / 100).toFixed(2)}`;
+        breakdown.classList.remove('hidden');
+      } else {
+        breakdown.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('amount-input').addEventListener('input', (e) => {
+      const amount = parseInt(e.target.value) || 0;
+      selectedAmount = amount;
+      updateGstBreakdown(amount);
+
+      document.querySelectorAll('.amount-btn').forEach(btn => {
+        btn.classList.remove('bg-whatsapp', 'text-white');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+      });
+    });
+
+    async function processPayment() {
+      const amount = parseInt(document.getElementById('amount-input').value) || selectedAmount;
+      const errorDiv = document.getElementById('amount-error');
+      const btn = document.getElementById('pay-btn');
+
+      errorDiv.classList.add('hidden');
+
+      if (!amount || amount < 1) {
+        errorDiv.textContent = 'Please select or enter an amount';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      if (!currentCustomer) {
+        errorDiv.textContent = 'Please find your account first';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('btn-loading');
+      btn.innerHTML = '<span>Processing...</span>';
+
+      try {
+        const orderResponse = await fetch(`${API_BASE}/payments/public/create-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: cleanPhoneNumber(document.getElementById('phone-input').value),
+            name: currentCustomer.name,
+            amount: amount
+          })
+        });
+
+        const orderData = await orderResponse.json();
+
+        if (!orderResponse.ok) {
+          throw new Error(orderData.detail || 'Failed to create order');
+        }
+
+        const options = {
+          key: orderData.key_id,
+          amount: orderData.amount,
+          currency: 'INR',
+          name: 'Akashvanni',
+          description: `Wallet Recharge - ₹${amount}`,
+          order_id: orderData.order_id,
+          handler: async function(response) {
+            try {
+              const verifyResponse = await fetch(`${API_BASE}/payments/public/verify-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                })
+              });
+
+              const verifyData = await verifyResponse.json();
+
+              if (verifyResponse.ok) {
+                let msg = `Payment of ₹${amount} received successfully!`;
+                if (verifyData.auto_credited) {
+                  msg += ` ₹${verifyData.credited_amount.toFixed(2)} has been added to your wallet.`;
+                } else {
+                  msg += ' Your balance will be updated shortly by our team.';
+                }
+                document.getElementById('success-message').textContent = msg;
+                document.getElementById('amount-section').classList.add('hidden');
+                document.getElementById('success-section').classList.remove('hidden');
+              } else {
+                throw new Error(verifyData.detail || 'Payment verification failed');
+              }
+            } catch (error) {
+              errorDiv.textContent = error.message;
+              errorDiv.classList.remove('hidden');
+            }
+            btn.disabled = false;
+            btn.classList.remove('btn-loading');
+            btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg><span>Pay Now</span>';
+          },
+          prefill: {
+            name: currentCustomer?.name || '',
+            contact: document.getElementById('phone-input').value
+          },
+          theme: { color: '#25D366' },
+          modal: {
+            ondismiss: function() {
+              btn.disabled = false;
+              btn.classList.remove('btn-loading');
+              btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg><span>Pay Now</span>';
+            }
+          }
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to process payment';
+        errorDiv.classList.remove('hidden');
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+        btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg><span>Pay Now</span>';
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('phone-input').value = '';
+      document.getElementById('amount-input').value = '';
+      document.getElementById('customer-info').classList.add('hidden');
+      document.getElementById('amount-section').classList.add('hidden');
+      document.getElementById('success-section').classList.add('hidden');
+      document.getElementById('phone-error').classList.add('hidden');
+      document.getElementById('amount-error').classList.add('hidden');
+      document.getElementById('gst-breakdown').classList.add('hidden');
+      currentCustomer = null;
+      selectedAmount = 0;
+
+      document.querySelectorAll('.amount-btn').forEach(btn => {
+        btn.classList.remove('bg-whatsapp', 'text-white');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+      });
+    }
+  </script>
+</body>
+</html>

@@ -117,6 +117,213 @@ def calculate_gst(total_amount_paise: int):
         "credited": subtotal  # Amount added to wallet
     }
 
+# ==================== PUBLIC ENDPOINTS (No Auth Required) ====================
+
+@router.post("/public/find-customer")
+def public_find_customer(
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    """Find customer by phone number in PublicCustomer table (for portal recharge)"""
+    phone = data.get("phone", "").strip()
+
+    # Clean phone number - remove non-digits
+    phone = ''.join(filter(str.isdigit, phone))
+
+    # Remove leading 91 if present
+    if len(phone) == 12 and phone.startswith('91'):
+        phone = phone[2:]
+
+    if len(phone) != 10:
+        raise HTTPException(status_code=400, detail="Please enter a valid 10-digit phone number")
+
+    # Find in PublicCustomer table
+    customer = db.query(models.PublicCustomer).filter(
+        models.PublicCustomer.phone == phone,
+        models.PublicCustomer.is_active == True
+    ).first()
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="No account found with this phone number. Please contact support to register.")
+
+    # Get linked user info if exists
+    user_balance = None
+    if customer.user_id:
+        user = db.query(models.User).filter(models.User.id == customer.user_id).first()
+        if user:
+            user_balance = user.balance
+
+    return {
+        "id": customer.id,
+        "name": customer.name,
+        "phone": customer.phone,
+        "user_id": customer.user_id,
+        "balance": user_balance
+    }
+
+
+@router.post("/public/create-order")
+def public_create_order(
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    """Create Razorpay order for public portal recharge"""
+    phone = data.get("phone", "").strip()
+    amount = data.get("amount", 0)
+    customer_name = data.get("name", "")
+
+    # Clean phone number
+    phone = ''.join(filter(str.isdigit, phone))
+    if len(phone) == 12 and phone.startswith('91'):
+        phone = phone[2:]
+
+    if len(phone) != 10:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    # Find customer in PublicCustomer table
+    customer = db.query(models.PublicCustomer).filter(
+        models.PublicCustomer.phone == phone,
+        models.PublicCustomer.is_active == True
+    ).first()
+
+    client = get_razorpay_client()
+
+    # Convert rupees to paise
+    amount_paise = int(amount) * 100
+
+    if amount_paise < 100:
+        raise HTTPException(status_code=400, detail="Minimum amount is ₹1")
+
+    # Calculate GST
+    gst_calc = calculate_gst(amount_paise)
+
+    # Create Razorpay order
+    try:
+        razorpay_order = client.order.create({
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": f"portal_{phone}_{int(datetime.now().timestamp())}",
+            "notes": {
+                "phone": phone,
+                "customer_name": customer.name if customer else customer_name,
+                "public_customer_id": str(customer.id) if customer else "",
+                "user_id": str(customer.user_id) if customer and customer.user_id else "",
+                "source": "public_portal",
+                "subtotal": str(gst_calc["subtotal"]),
+                "gst": str(gst_calc["cgst"] + gst_calc["sgst"])
+            }
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+
+    # Create PublicPayment record
+    public_payment = models.PublicPayment(
+        phone=phone,
+        customer_name=customer.name if customer else customer_name,
+        public_customer_id=customer.id if customer else None,
+        user_id=customer.user_id if customer else None,
+        amount=amount_paise,
+        razorpay_order_id=razorpay_order["id"],
+        status="pending",
+        subtotal=gst_calc["subtotal"],
+        gst_amount=gst_calc["cgst"] + gst_calc["sgst"],
+        credited_amount=gst_calc["credited"]
+    )
+    db.add(public_payment)
+    db.commit()
+
+    return {
+        "order_id": razorpay_order["id"],
+        "amount": amount_paise,
+        "currency": "INR",
+        "key_id": settings.RAZORPAY_KEY_ID
+    }
+
+
+@router.post("/public/verify-payment")
+def public_verify_payment(
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    """Verify payment for public portal recharge - saves to PublicPayment table"""
+    razorpay_order_id = data.get("razorpay_order_id")
+    razorpay_payment_id = data.get("razorpay_payment_id")
+    razorpay_signature = data.get("razorpay_signature")
+
+    # Find the PublicPayment record
+    payment = db.query(models.PublicPayment).filter(
+        models.PublicPayment.razorpay_order_id == razorpay_order_id
+    ).first()
+
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    if payment.status == "completed":
+        return {"status": "already_verified", "message": "Payment already completed"}
+
+    # Verify signature
+    try:
+        message = f"{razorpay_order_id}|{razorpay_payment_id}"
+        expected_signature = hmac.new(
+            settings.RAZORPAY_KEY_SECRET.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        if expected_signature != razorpay_signature:
+            payment.status = "failed"
+            db.commit()
+            raise HTTPException(status_code=400, detail="Invalid signature")
+    except HTTPException:
+        raise
+    except Exception as e:
+        payment.status = "failed"
+        db.commit()
+        raise HTTPException(status_code=400, detail=f"Verification failed: {str(e)}")
+
+    # Update payment record
+    payment.razorpay_payment_id = razorpay_payment_id
+    payment.razorpay_signature = razorpay_signature
+    payment.status = "completed"
+
+    # If user is mapped, auto-credit their balance
+    new_balance = None
+    if payment.user_id:
+        user = db.query(models.User).filter(models.User.id == payment.user_id).first()
+        if user:
+            # Create transaction
+            transaction = models.Transaction(
+                user_id=user.id,
+                amount=payment.credited_amount,
+                type="credit",
+                status="completed",
+                razorpay_order_id=razorpay_order_id,
+                razorpay_payment_id=razorpay_payment_id,
+                description=f"Portal Recharge from {payment.phone}"
+            )
+            db.add(transaction)
+
+            # Update balance
+            user.balance += payment.credited_amount
+            new_balance = user.balance / 100
+
+            # Mark as processed
+            payment.processed = True
+            payment.processed_at = datetime.utcnow()
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Payment of ₹{payment.amount / 100:.2f} received successfully",
+        "credited_amount": payment.credited_amount / 100 if payment.credited_amount else None,
+        "balance_rupees": new_balance,
+        "auto_credited": payment.user_id is not None
+    }
+
+
+# ==================== AUTHENTICATED ENDPOINTS ====================
+
 @router.get("/check-gst", response_model=schemas.GSTCheckResponse)
 def check_gst_status(
     current_user: models.User = Depends(get_current_user)
