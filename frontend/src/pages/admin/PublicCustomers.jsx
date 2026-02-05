@@ -52,7 +52,7 @@ export default function PublicCustomers() {
       const [customersRes, paymentsRes, usersRes] = await Promise.all([
         api.get('/admin/public-customers'),
         api.get('/admin/public-payments'),
-        api.get('/admin/customers?limit=500')
+        api.get('/admin/customers?limit=100')
       ]);
       setCustomers(customersRes.data);
       setPayments(paymentsRes.data);
