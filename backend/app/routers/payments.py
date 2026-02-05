@@ -138,9 +138,14 @@ def public_find_customer(
     if len(phone) != 10:
         raise HTTPException(status_code=400, detail="Please enter a valid 10-digit phone number")
 
-    # Find user by phone with portal enabled
+    # Find user by phone with portal enabled (check multiple formats)
+    from sqlalchemy import or_
     user = db.query(models.User).filter(
-        models.User.phone == phone,
+        or_(
+            models.User.phone == phone,              # 8700762648
+            models.User.phone == f"+91{phone}",      # +918700762648
+            models.User.phone == f"91{phone}",       # 918700762648
+        ),
         models.User.portal_enabled == True,
         models.User.is_active == True
     ).first()
@@ -164,6 +169,7 @@ def public_create_order(
     db: Session = Depends(get_db)
 ):
     """Create Razorpay order for public portal recharge - uses users table directly"""
+    from sqlalchemy import or_
     phone = data.get("phone", "").strip()
     amount = data.get("amount", 0)
     phone = clean_phone_number(phone)
@@ -171,9 +177,13 @@ def public_create_order(
     if len(phone) != 10:
         raise HTTPException(status_code=400, detail="Invalid phone number")
 
-    # Find user by phone with portal enabled
+    # Find user by phone with portal enabled (check multiple formats)
     user = db.query(models.User).filter(
-        models.User.phone == phone,
+        or_(
+            models.User.phone == phone,              # 8700762648
+            models.User.phone == f"+91{phone}",      # +918700762648
+            models.User.phone == f"91{phone}",       # 918700762648
+        ),
         models.User.portal_enabled == True,
         models.User.is_active == True
     ).first()
