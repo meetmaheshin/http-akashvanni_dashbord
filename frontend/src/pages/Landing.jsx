@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Zap,
@@ -17,7 +18,9 @@ import {
   TrendingUp,
   FileText,
   Bot,
-  XCircle
+  XCircle,
+  ChevronDown,
+  HelpCircle
 } from 'lucide-react';
 
 export default function Landing() {
@@ -92,6 +95,76 @@ export default function Landing() {
     { feature: 'Real-time Analytics', us: true, others: true },
   ];
 
+  const faqs = [
+    {
+      question: "Is there any automation with WhatsApp?",
+      answer: "Yes! WhatsApp Business API allows full automation including bulk messaging, auto-replies, AI-powered chatbots, and scheduled campaigns. Akashvanni provides the official WhatsApp Business API with an easy-to-use dashboard - no coding required. You can automate marketing messages, customer support, order notifications, and more."
+    },
+    {
+      question: "What is the best WhatsApp automation tool for small businesses?",
+      answer: "Akashvanni is built specifically for Indian small businesses. Unlike other tools that charge ₹2,000-₹10,000/month in subscription fees, Akashvanni has ZERO monthly fees - you only pay per message starting at just ₹2. Plus, the more messages you send, the cheaper it gets (as low as ₹1/message for 10,000+ messages). We also provide AI-powered message generation, GST compliant invoices, and real-time analytics."
+    },
+    {
+      question: "How much does WhatsApp Business API cost in India?",
+      answer: "With Akashvanni, there's no setup fee and no monthly subscription. You pay only for messages you send: Marketing messages start at ₹2.00 and Utility messages at ₹1.00. Volume discounts apply automatically - send 10,000+ messages/month and pay as low as ₹1.00 for marketing and ₹0.25 for utility messages. Pricing resets on the 1st of every month."
+    },
+    {
+      question: "Can I automate WhatsApp messages with AI?",
+      answer: "Absolutely! Akashvanni includes built-in AI-powered message generation. Our AI can craft personalized messages for each customer, improving engagement rates by up to 3x. Simply describe what you want to communicate, and our AI creates professional, engaging messages in seconds. Works for marketing campaigns, customer support, and transactional notifications."
+    },
+    {
+      question: "Is WhatsApp automation safe? Will my account get banned?",
+      answer: "Akashvanni uses the official WhatsApp Business API approved by Meta, which means zero risk of account bans. Unlike unofficial tools that use WhatsApp Web scraping (which can get your number blocked), our API integration is 100% compliant with WhatsApp's policies. Your messages are delivered reliably with 99.9% uptime."
+    },
+    {
+      question: "How to send bulk WhatsApp messages without getting blocked?",
+      answer: "The only safe way to send bulk WhatsApp messages is through the official WhatsApp Business API. Akashvanni provides this API access with no monthly fees. You can send thousands of messages instantly with proper template approval from Meta. Our platform handles message queuing, delivery optimization, and compliance automatically."
+    },
+    {
+      question: "What's the difference between WhatsApp Business App and WhatsApp Business API?",
+      answer: "WhatsApp Business App is free but limited - you can only send messages manually, one at a time. WhatsApp Business API (what Akashvanni provides) allows bulk messaging, automation, AI chatbots, CRM integration, and analytics. The API is essential for businesses sending more than 50 messages/day or needing automated workflows."
+    },
+    {
+      question: "Do I need a monthly subscription for WhatsApp automation?",
+      answer: "Not with Akashvanni! Most WhatsApp automation platforms charge ₹2,000-₹15,000/month regardless of usage. Akashvanni is India's only pay-per-message platform with ZERO monthly fees. You add balance to your wallet and pay only when you send messages. No commitments, no lock-ins, no wasted money on unused subscriptions."
+    },
+    {
+      question: "Which WhatsApp automation tool is cheapest for high volume messaging?",
+      answer: "Akashvanni offers the most competitive volume pricing in India. At 10,000+ messages/month, marketing messages cost just ₹1.00 each and utility messages just ₹0.25 each - that's up to 75% cheaper than most competitors. Plus, there's no monthly subscription eating into your budget. Your volume discount resets monthly, so every month is a fresh start."
+    },
+    {
+      question: "How do I get started with WhatsApp Business API?",
+      answer: "Getting started with Akashvanni is simple: 1) Create a free account - no credit card required, 2) Add balance to your wallet (start with as little as ₹100), 3) Start sending AI-powered messages. We handle all the Meta/WhatsApp approval process for you. Most businesses are up and running within 24 hours."
+    },
+  ];
+
+  const [openFaq, setOpenFaq] = useState(null);
+
+  // Inject FAQ Schema (JSON-LD) for SEO
+  useEffect(() => {
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faqs.map(faq => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(faqSchema);
+    script.id = 'faq-schema';
+    document.head.appendChild(script);
+    return () => {
+      const el = document.getElementById('faq-schema');
+      if (el) el.remove();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -106,7 +179,7 @@ export default function Landing() {
               <a href="#features" className="text-gray-600 hover:text-green-600 transition-colors">Features</a>
               <a href="#pricing" className="text-gray-600 hover:text-green-600 transition-colors">Pricing</a>
               <a href="#compare" className="text-gray-600 hover:text-green-600 transition-colors">Why Us</a>
-              <a href="#testimonials" className="text-gray-600 hover:text-green-600 transition-colors">Testimonials</a>
+              <a href="#faq" className="text-gray-600 hover:text-green-600 transition-colors">FAQ</a>
             </div>
             <div className="flex items-center gap-4">
               <a href="/portal.html" className="text-gray-600 hover:text-green-600 transition-colors font-medium">
@@ -711,6 +784,64 @@ export default function Landing() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <HelpCircle className="w-4 h-4" />
+              Frequently Asked Questions
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Everything you need to know about{' '}
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                WhatsApp Automation
+              </span>
+            </h2>
+            <p className="text-lg text-gray-600">
+              Got questions? We've got answers. Here's what businesses ask us most.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {faqs.map((faq, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                viewport={{ once: true }}
+                className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                  className="w-full flex items-center justify-between p-5 text-left"
+                >
+                  <h3 className="font-semibold text-gray-900 pr-4">{faq.question}</h3>
+                  <ChevronDown className={`w-5 h-5 text-gray-500 flex-shrink-0 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
+                </button>
+                <div className={`overflow-hidden transition-all duration-300 ${openFaq === index ? 'max-h-96 pb-5' : 'max-h-0'}`}>
+                  <p className="px-5 text-gray-600 leading-relaxed">{faq.answer}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <p className="text-gray-500 mb-4">Still have questions?</p>
+            <a
+              href="https://wa.me/919643847397?text=Hi%20I%20have%20a%20question%20about%20WhatsApp%20automation"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-6 py-3 rounded-full font-medium hover:bg-green-100 transition-colors"
+            >
+              <MessageSquare className="w-5 h-5" />
+              Chat with us on WhatsApp
+            </a>
           </div>
         </div>
       </section>

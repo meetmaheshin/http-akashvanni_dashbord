@@ -1,10 +1,12 @@
 # Robots.txt for akashvanni.com
-# WhatsApp Business API Dashboard
+# WhatsApp Business API Automation Platform
 
 User-agent: *
 Allow: /
 Allow: /landing
 Allow: /ecommerce/
+Allow: /portal.html
+Allow: /register
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /profile
