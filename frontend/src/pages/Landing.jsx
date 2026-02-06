@@ -109,9 +109,9 @@ export default function Landing() {
               <a href="#testimonials" className="text-gray-600 hover:text-green-600 transition-colors">Testimonials</a>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/login" className="text-gray-600 hover:text-green-600 transition-colors font-medium">
-                Login
-              </Link>
+              <a href="/portal.html" className="text-gray-600 hover:text-green-600 transition-colors font-medium">
+                Customer Portal
+              </a>
               <Link
                 to="/register"
                 className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-2 rounded-lg font-medium hover:shadow-lg hover:shadow-green-500/25 transition-all"
@@ -491,112 +491,189 @@ export default function Landing() {
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
-              <IndianRupee className="w-4 h-4" />
-              Simple Pay-Per-Message Pricing
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              No subscriptions.{' '}
-              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                No monthly fees.
-              </span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Just pay for the messages you send. The more you send, the more you save.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Standard Pricing */}
+          {/* Header */}
+          <div className="text-center mb-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
-              className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm"
             >
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Standard</h3>
-              <p className="text-gray-500 mb-6">Perfect for getting started</p>
-              <div className="mb-6">
-                <span className="text-5xl font-bold text-gray-900">&#8377;2</span>
-                <span className="text-gray-500 ml-2">per message</span>
+              {/* Zero Monthly Fee Banner */}
+              <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-full text-lg font-bold mb-6 shadow-lg shadow-green-500/30">
+                <Sparkles className="w-6 h-6" />
+                ₹0 MONTHLY FEE - FOREVER!
+                <Sparkles className="w-6 h-6" />
               </div>
-              <ul className="space-y-3 mb-8">
-                {[
-                  'AI-powered message generation',
-                  'Template & session messages',
-                  'Real-time delivery tracking',
-                  'GST compliant invoices',
-                  'API access included',
-                  'Email support'
-                ].map((feature) => (
-                  <li key={feature} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-600">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/register"
-                className="block w-full text-center py-3 rounded-xl font-medium transition-all border border-gray-200 text-gray-700 hover:border-green-500 hover:text-green-600"
-              >
-                Get Started Free
-              </Link>
-            </motion.div>
 
-            {/* Bulk Pricing */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              viewport={{ once: true }}
-              className="relative bg-white rounded-2xl p-8 border-2 border-green-500 shadow-xl shadow-green-500/10"
-            >
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-                Best Value
+              <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+                India's Most{' '}
+                <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Affordable
+                </span>
+                {' '}WhatsApp API
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
+                No hidden charges. No monthly subscriptions. Just pure pay-per-message pricing.
+                <br />
+                <span className="font-semibold text-green-600">The more you send, the less you pay!</span>
+              </p>
+
+              {/* USP Badges */}
+              <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Zero Setup Fee
+                </div>
+                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Zero Monthly Fee
+                </div>
+                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Volume Discounts
+                </div>
+                <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
+                  <CheckCircle2 className="w-5 h-5" />
+                  GST Invoice
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Bulk Volume</h3>
-              <p className="text-gray-500 mb-6">For 2000+ messages per day</p>
-              <div className="mb-6">
-                <span className="text-5xl font-bold text-gray-900">&#8377;1.80</span>
-                <span className="text-gray-500 ml-2">per message</span>
-              </div>
-              <div className="bg-green-50 rounded-lg p-3 mb-6">
-                <p className="text-green-700 text-sm font-medium">
-                  Save 25% when you send 1000+ messages daily!
-                </p>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {[
-                  'Everything in Standard',
-                  'Bulk volume discount',
-                  'Priority message delivery',
-                  'Advanced analytics dashboard',
-                  'Priority support',
-                  'Dedicated account manager'
-                ].map((feature) => (
-                  <li key={feature} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-600">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/register"
-                className="block w-full text-center py-3 rounded-xl font-medium transition-all bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25"
-              >
-                Start Sending
-              </Link>
             </motion.div>
           </div>
 
-          {/* Pricing Note */}
-          <div className="mt-12 text-center">
-            <p className="text-gray-500">
-              All prices are in INR and include GST. Bulk pricing is automatically applied when you reach 1000+ messages/day.
-            </p>
-          </div>
+          {/* Pricing Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="max-w-5xl mx-auto"
+          >
+            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
+              {/* Table Header */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="font-semibold text-lg">Monthly Volume</div>
+                  <div className="font-semibold text-lg">Marketing Message</div>
+                  <div className="font-semibold text-lg">Utility Message</div>
+                </div>
+              </div>
+
+              {/* Pricing Tiers */}
+              <div className="divide-y divide-gray-100">
+                {/* Tier 1 - Starter */}
+                <div className="grid grid-cols-3 gap-4 p-6 items-center hover:bg-gray-50 transition-colors">
+                  <div className="text-center">
+                    <span className="text-gray-600 font-medium">Up to 2,499</span>
+                    <p className="text-xs text-gray-400">messages/month</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-gray-900">₹2.00</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-gray-900">₹1.00</span>
+                  </div>
+                </div>
+
+                {/* Tier 2 */}
+                <div className="grid grid-cols-3 gap-4 p-6 items-center hover:bg-green-50 transition-colors bg-green-50/50">
+                  <div className="text-center">
+                    <span className="text-gray-700 font-semibold">2,500 - 4,999</span>
+                    <p className="text-xs text-green-600 font-medium">10% OFF</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">₹1.80</span>
+                    <p className="text-xs text-gray-400 line-through">₹2.00</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">₹0.80</span>
+                    <p className="text-xs text-gray-400 line-through">₹1.00</p>
+                  </div>
+                </div>
+
+                {/* Tier 3 */}
+                <div className="grid grid-cols-3 gap-4 p-6 items-center hover:bg-green-50 transition-colors">
+                  <div className="text-center">
+                    <span className="text-gray-700 font-semibold">5,000 - 9,999</span>
+                    <p className="text-xs text-green-600 font-medium">25% OFF</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">₹1.50</span>
+                    <p className="text-xs text-gray-400 line-through">₹2.00</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">₹0.50</span>
+                    <p className="text-xs text-gray-400 line-through">₹1.00</p>
+                  </div>
+                </div>
+
+                {/* Tier 4 - Best Value */}
+                <div className="grid grid-cols-3 gap-4 p-6 items-center bg-gradient-to-r from-green-100 to-emerald-100 relative">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-1 rounded-full text-sm font-bold">
+                    🔥 BEST VALUE
+                  </div>
+                  <div className="text-center">
+                    <span className="text-gray-900 font-bold text-lg">10,000+</span>
+                    <p className="text-xs text-green-700 font-bold">UP TO 50% OFF!</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-4xl font-bold text-green-700">₹1.00</span>
+                    <p className="text-xs text-gray-500 line-through">₹2.00</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-4xl font-bold text-green-700">₹0.25</span>
+                    <p className="text-xs text-gray-500 line-through">₹1.00</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Price Reset Note */}
+            <div className="mt-8 text-center">
+              <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-6 py-3 rounded-full">
+                <Clock className="w-5 h-5" />
+                <span className="font-medium">Pricing resets on 1st of every month - Your savings start fresh!</span>
+              </div>
+            </div>
+
+            {/* Features included */}
+            <div className="mt-10 bg-gray-50 rounded-2xl p-8">
+              <h3 className="text-center text-xl font-bold text-gray-900 mb-6">Everything Included in Every Message</h3>
+              <div className="grid md:grid-cols-4 gap-6">
+                {[
+                  { icon: Bot, text: 'AI-Powered Messages' },
+                  { icon: Shield, text: 'Enterprise Security' },
+                  { icon: BarChart3, text: 'Real-time Analytics' },
+                  { icon: FileText, text: 'GST Compliant Invoice' },
+                  { icon: Zap, text: 'Instant Delivery' },
+                  { icon: Globe, text: 'API Access' },
+                  { icon: Users, text: 'Unlimited Contacts' },
+                  { icon: Clock, text: '24/7 Support' },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <item.icon className="w-5 h-5 text-green-600" />
+                    </div>
+                    <span className="text-gray-700 font-medium">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="mt-10 text-center">
+              <Link
+                to="/register"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-10 py-5 rounded-xl font-bold text-xl hover:shadow-2xl hover:shadow-green-500/30 transition-all"
+              >
+                Start Free - No Card Required
+                <ArrowRight className="w-6 h-6" />
+              </Link>
+              <p className="mt-4 text-gray-500">
+                Join 5000+ businesses saving money with Akashvanni
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
