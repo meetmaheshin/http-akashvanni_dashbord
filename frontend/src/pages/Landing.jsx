@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import {
@@ -185,12 +184,12 @@ export default function Landing() {
               <a href="/portal.html" className="text-gray-600 hover:text-green-600 transition-colors font-medium">
                 Customer Portal
               </a>
-              <Link
-                to="/register"
+              <a
+                href="/portal.html"
                 className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-2 rounded-lg font-medium hover:shadow-lg hover:shadow-green-500/25 transition-all"
               >
                 Get Started Free
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -264,13 +263,13 @@ export default function Landing() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  to="/register"
+                <a
+                  href="/portal.html"
                   className="group flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl hover:shadow-green-500/25 transition-all"
                 >
                   Start Free - No Card Required
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                </a>
                 <a
                   href="#pricing"
                   className="flex items-center gap-2 border-2 border-gray-200 text-gray-700 px-8 py-4 rounded-xl font-semibold text-lg hover:border-green-500 hover:text-green-600 transition-all"
@@ -470,9 +469,9 @@ export default function Landing() {
           <div className="mt-8 text-center">
             <p className="text-gray-600">
               Stop paying for subscriptions you don't fully use.{' '}
-              <Link to="/register" className="text-green-600 font-semibold hover:underline">
+              <a href="/portal.html" className="text-green-600 font-semibold hover:underline">
                 Switch to pay-per-message today
-              </Link>
+              </a>
             </p>
           </div>
         </div>
@@ -735,13 +734,13 @@ export default function Landing() {
 
             {/* CTA */}
             <div className="mt-10 text-center">
-              <Link
-                to="/register"
+              <a
+                href="/portal.html"
                 className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-10 py-5 rounded-xl font-bold text-xl hover:shadow-2xl hover:shadow-green-500/30 transition-all"
               >
                 Start Free - No Card Required
                 <ArrowRight className="w-6 h-6" />
-              </Link>
+              </a>
               <p className="mt-4 text-gray-500">
                 Join 5000+ businesses saving money with Akashvanni
               </p>
@@ -859,13 +858,13 @@ export default function Landing() {
             No monthly fees. No credit card required. Start free today.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to="/register"
+            <a
+              href="/portal.html"
               className="group flex items-center gap-2 bg-white text-green-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all"
             >
               Get Started Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            </a>
             <a
               href="mailto:support@akashvanni.com"
               className="flex items-center gap-2 border-2 border-white/30 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all"
@@ -895,7 +894,7 @@ export default function Landing() {
               <ul className="space-y-2">
                 <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Features</a></li>
                 <li><a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
-                <li><Link to="/login" className="text-gray-400 hover:text-white transition-colors">Dashboard</Link></li>
+                <li><a href="/portal.html" className="text-gray-400 hover:text-white transition-colors">Dashboard</a></li>
               </ul>
             </div>
 
