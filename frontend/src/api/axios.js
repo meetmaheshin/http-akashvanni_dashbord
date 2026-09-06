@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use environment variable or default to production API
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.akashvanni.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://akashvanni.com/api';
 
 const api = axios.create({
   baseURL: API_URL,

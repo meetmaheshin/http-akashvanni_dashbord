@@ -255,10 +255,10 @@ export default function WhatsAppSettings() {
             <label className="text-sm font-medium text-gray-700">Webhook URL</label>
             <div className="flex items-center gap-2 mt-1">
               <code className="flex-1 bg-white px-3 py-2 rounded border text-sm font-mono">
-                https://api.akashvanni.com/whatsapp/webhook
+                https://akashvanni.com/whatsapp/webhook
               </code>
               <button
-                onClick={() => copyToClipboard('https://api.akashvanni.com/whatsapp/webhook')}
+                onClick={() => copyToClipboard('https://akashvanni.com/whatsapp/webhook')}
                 className="btn-secondary"
               >
                 <Copy className="h-4 w-4" />
