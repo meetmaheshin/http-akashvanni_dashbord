@@ -66,7 +66,7 @@ export default function Landing() {
 
   const testimonials = [
     {
-      quote: "No monthly fees was a game changer for us. We only pay when we send messages. Akashvanni is perfect for seasonal businesses like ours.",
+      quote: "One flat ₹499 plan and the lowest message rates we could find anywhere. Predictable billing every month made budgeting effortless for us.",
       author: "Rahul Sharma",
       role: "CEO, TechStart India",
       rating: 5
@@ -78,7 +78,7 @@ export default function Landing() {
       rating: 5
     },
     {
-      quote: "GST compliant invoicing and pay-as-you-go pricing made this a no-brainer for our business. No more monthly subscriptions!",
+      quote: "GST compliant invoicing plus utility messages at just ₹0.20 made this a no-brainer for our business. Best value on WhatsApp API in India!",
       author: "Amit Kumar",
       role: "Founder, EcomBiz",
       rating: 5
@@ -86,11 +86,11 @@ export default function Landing() {
   ];
 
   const comparisonFeatures = [
-    { feature: 'Monthly Subscription', us: false, others: true },
+    { feature: 'One Simple Flat Plan', us: '₹499/mo', others: '₹2,000+/mo' },
     { feature: 'AI-Powered Messages', us: true, others: false },
-    { feature: 'Pay Only for What You Use', us: true, others: false },
+    { feature: 'Lowest Per-Message Rates', us: true, others: false },
     { feature: 'GST Compliant Invoices', us: true, others: 'Some' },
-    { feature: 'Bulk Discount Pricing', us: true, others: 'Limited' },
+    { feature: 'No Hidden Charges', us: true, others: 'Limited' },
     { feature: 'Real-time Analytics', us: true, others: true },
   ];
 
@@ -101,11 +101,11 @@ export default function Landing() {
     },
     {
       question: "What is the best WhatsApp automation tool for small businesses?",
-      answer: "Akashvanni is built specifically for Indian small businesses. Unlike other tools that charge ₹2,000-₹10,000/month in subscription fees, Akashvanni has ZERO monthly fees - you only pay per message starting at just ₹2. Plus, the more messages you send, the cheaper it gets (as low as ₹1/message for 10,000+ messages). We also provide AI-powered message generation, GST compliant invoices, and real-time analytics."
+      answer: "Akashvanni is built specifically for Indian small businesses. Unlike other tools that charge ₹2,000-₹10,000/month, Akashvanni gives you one simple flat plan at just ₹499/month with the lowest per-message rates in India - Marketing at ₹0.95, Utility at ₹0.20, and Authentication at ₹0.20. We also provide AI-powered message generation, GST compliant invoices, and real-time analytics."
     },
     {
       question: "How much does WhatsApp Business API cost in India?",
-      answer: "With Akashvanni, there's no setup fee and no monthly subscription. You pay only for messages you send: Marketing messages start at ₹2.00 and Utility messages at ₹1.00. Volume discounts apply automatically - send 10,000+ messages/month and pay as low as ₹1.00 for marketing and ₹0.25 for utility messages. Pricing resets on the 1st of every month."
+      answer: "With Akashvanni, you get one simple plan at ₹499/month with zero setup fee. Message pricing is flat and transparent: Marketing messages at ₹0.95, Utility messages at ₹0.20, and Authentication messages at ₹0.20. No hidden charges, no complicated volume tiers - just the lowest rates in India."
     },
     {
       question: "Can I automate WhatsApp messages with AI?",
@@ -117,23 +117,23 @@ export default function Landing() {
     },
     {
       question: "How to send bulk WhatsApp messages without getting blocked?",
-      answer: "The only safe way to send bulk WhatsApp messages is through the official WhatsApp Business API. Akashvanni provides this API access with no monthly fees. You can send thousands of messages instantly with proper template approval from Meta. Our platform handles message queuing, delivery optimization, and compliance automatically."
+      answer: "The only safe way to send bulk WhatsApp messages is through the official WhatsApp Business API. Akashvanni provides this API access on one affordable ₹499/month plan. You can send thousands of messages instantly with proper template approval from Meta. Our platform handles message queuing, delivery optimization, and compliance automatically."
     },
     {
       question: "What's the difference between WhatsApp Business App and WhatsApp Business API?",
       answer: "WhatsApp Business App is free but limited - you can only send messages manually, one at a time. WhatsApp Business API (what Akashvanni provides) allows bulk messaging, automation, AI chatbots, CRM integration, and analytics. The API is essential for businesses sending more than 50 messages/day or needing automated workflows."
     },
     {
-      question: "Do I need a monthly subscription for WhatsApp automation?",
-      answer: "Not with Akashvanni! Most WhatsApp automation platforms charge ₹2,000-₹15,000/month regardless of usage. Akashvanni is India's only pay-per-message platform with ZERO monthly fees. You add balance to your wallet and pay only when you send messages. No commitments, no lock-ins, no wasted money on unused subscriptions."
+      question: "How much is the Akashvanni monthly plan?",
+      answer: "Akashvanni keeps it simple with one flat plan at just ₹499/month - far below the ₹2,000-₹15,000/month most WhatsApp automation platforms charge. Your plan includes full access to AI-powered messaging, analytics, and the official WhatsApp Business API, plus the lowest per-message rates in India. No hidden fees, no lock-ins."
     },
     {
       question: "Which WhatsApp automation tool is cheapest for high volume messaging?",
-      answer: "Akashvanni offers the most competitive volume pricing in India. At 10,000+ messages/month, marketing messages cost just ₹1.00 each and utility messages just ₹0.25 each - that's up to 75% cheaper than most competitors. Plus, there's no monthly subscription eating into your budget. Your volume discount resets monthly, so every month is a fresh start."
+      answer: "Akashvanni offers the most competitive rates in India. On our flat ₹499/month plan, marketing messages cost just ₹0.95 each, while utility and authentication messages cost just ₹0.20 each - up to 75% cheaper than most competitors. Simple, transparent pricing with no surprise charges eating into your budget."
     },
     {
       question: "How do I get started with WhatsApp Business API?",
-      answer: "Getting started with Akashvanni is simple: 1) Create a free account - no credit card required, 2) Add balance to your wallet (start with as little as ₹100), 3) Start sending AI-powered messages. We handle all the Meta/WhatsApp approval process for you. Most businesses are up and running within 24 hours."
+      answer: "Getting started with Akashvanni is simple: 1) Create a free account - no credit card required, 2) Activate your ₹499/month plan and add balance to your wallet, 3) Start sending AI-powered messages at India's lowest rates. We handle all the Meta/WhatsApp approval process for you. Most businesses are up and running within 24 hours."
     },
   ];
 
@@ -200,8 +200,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <Sparkles className="w-5 h-5" />
-            <span className="font-semibold">No Monthly Commitment!</span>
-            <span className="text-green-100">Unlike other platforms, we charge only for messages you send. Zero subscription fees.</span>
+            <span className="font-semibold">Just ₹499/month!</span>
+            <span className="text-green-100">One simple flat plan with the lowest per-message rates in India. No hidden charges.</span>
           </div>
         </div>
       </div>
@@ -250,7 +250,7 @@ export default function Landing() {
               <div className="flex items-center justify-center gap-6 mb-8 flex-wrap">
                 <div className="flex items-center gap-2 text-green-700 bg-green-50 px-4 py-2 rounded-full">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-medium">No Monthly Fees</span>
+                  <span className="font-medium">Just ₹499/month</span>
                 </div>
                 <div className="flex items-center gap-2 text-purple-700 bg-purple-50 px-4 py-2 rounded-full">
                   <Bot className="w-5 h-5" />
@@ -258,7 +258,7 @@ export default function Landing() {
                 </div>
                 <div className="flex items-center gap-2 text-blue-700 bg-blue-50 px-4 py-2 rounded-full">
                   <IndianRupee className="w-5 h-5" />
-                  <span className="font-medium">Pay Per Message</span>
+                  <span className="font-medium">Lowest Message Rates</span>
                 </div>
               </div>
 
@@ -405,14 +405,14 @@ export default function Landing() {
               Why Choose Akashvanni?
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              No Monthly Fees.{' '}
+              One Plan.{' '}
               <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                Ever.
+                ₹499/month.
               </span>
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Other platforms charge you monthly whether you send 10 messages or 10,000.
-              We believe you should only pay for what you use.
+              Other platforms charge ₹2,000+ every month with confusing tiers.
+              We give you one simple flat plan and the lowest message rates in India.
             </p>
           </div>
 
@@ -468,9 +468,9 @@ export default function Landing() {
           {/* Bottom Note */}
           <div className="mt-8 text-center">
             <p className="text-gray-600">
-              Stop paying for subscriptions you don't fully use.{' '}
+              Stop overpaying for bloated subscriptions.{' '}
               <a href="/portal.html" className="text-green-600 font-semibold hover:underline">
-                Switch to pay-per-message today
+                Switch to the ₹499 plan today
               </a>
             </p>
           </div>
@@ -535,7 +535,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { step: '1', title: 'Create Account', desc: 'Sign up for free. No credit card required to start.' },
-              { step: '2', title: 'Add Balance', desc: 'Add money to your wallet. Pay only for messages you send.' },
+              { step: '2', title: 'Activate ₹499 Plan', desc: 'Start your ₹499/month plan and add balance to send messages at the lowest rates.' },
               { step: '3', title: 'Send AI Messages', desc: 'Let AI create personalized messages and send in bulk.' }
             ].map((item, index) => (
               <motion.div
@@ -571,10 +571,10 @@ export default function Landing() {
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              {/* Zero Monthly Fee Banner */}
+              {/* Flat Plan Banner */}
               <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-full text-lg font-bold mb-6 shadow-lg shadow-green-500/30">
                 <Sparkles className="w-6 h-6" />
-                ₹0 MONTHLY FEE - FOREVER!
+                JUST ₹499/MONTH - ONE SIMPLE PLAN!
                 <Sparkles className="w-6 h-6" />
               </div>
 
@@ -586,9 +586,9 @@ export default function Landing() {
                 {' '}WhatsApp API
               </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-                No hidden charges. No monthly subscriptions. Just pure pay-per-message pricing.
+                One flat plan. No confusing tiers. Just the lowest per-message rates in India.
                 <br />
-                <span className="font-semibold text-green-600">The more you send, the less you pay!</span>
+                <span className="font-semibold text-green-600">Simple, transparent pricing you can count on!</span>
               </p>
 
               {/* USP Badges */}
@@ -599,11 +599,11 @@ export default function Landing() {
                 </div>
                 <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
                   <CheckCircle2 className="w-5 h-5" />
-                  Zero Monthly Fee
+                  Flat ₹499/month
                 </div>
                 <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
                   <CheckCircle2 className="w-5 h-5" />
-                  Volume Discounts
+                  Lowest Message Rates
                 </div>
                 <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium">
                   <CheckCircle2 className="w-5 h-5" />
@@ -621,90 +621,70 @@ export default function Landing() {
             viewport={{ once: true }}
             className="max-w-5xl mx-auto"
           >
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
-              {/* Table Header */}
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="font-semibold text-lg">Monthly Volume</div>
-                  <div className="font-semibold text-lg">Marketing Message</div>
-                  <div className="font-semibold text-lg">Utility Message</div>
+            {/* Monthly Plan Card */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-3xl shadow-2xl shadow-green-500/30 overflow-hidden mb-8">
+              <div className="p-8 md:p-10 text-center text-white">
+                <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
+                  <Sparkles className="w-4 h-4" />
+                  ALL-IN-ONE PLAN
                 </div>
+                <div className="flex items-end justify-center gap-1 mb-2">
+                  <span className="text-6xl md:text-7xl font-bold">₹499</span>
+                  <span className="text-2xl font-medium text-green-100 mb-2">/month</span>
+                </div>
+                <p className="text-green-100 text-lg max-w-xl mx-auto">
+                  Full platform access — AI messaging, analytics, official WhatsApp Business API, and GST invoices. Then simply pay the lowest per-message rates below.
+                </p>
               </div>
+            </div>
 
-              {/* Pricing Tiers */}
-              <div className="divide-y divide-gray-100">
-                {/* Tier 1 - Starter */}
-                <div className="grid grid-cols-3 gap-4 p-6 items-center hover:bg-gray-50 transition-colors">
-                  <div className="text-center">
-                    <span className="text-gray-600 font-medium">Up to 2,499</span>
-                    <p className="text-xs text-gray-400">messages/month</p>
+            {/* Per-Message Rate Cards */}
+            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200 p-6 md:p-8">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900">Simple Flat Per-Message Rates</h3>
+                <p className="text-gray-500 mt-1">Same low price no matter how many you send.</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Marketing */}
+                <div className="rounded-2xl border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-gray-900">₹2.00</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-gray-900">₹1.00</span>
-                  </div>
+                  <div className="font-semibold text-gray-700 mb-2">Marketing</div>
+                  <div className="text-4xl font-bold text-gray-900">₹0.95</div>
+                  <p className="text-xs text-gray-400 mt-1">per message</p>
                 </div>
 
-                {/* Tier 2 */}
-                <div className="grid grid-cols-3 gap-4 p-6 items-center hover:bg-green-50 transition-colors bg-green-50/50">
-                  <div className="text-center">
-                    <span className="text-gray-700 font-semibold">2,500 - 4,999</span>
-                    <p className="text-xs text-green-600 font-medium">10% OFF</p>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-green-600">₹1.80</span>
-                    <p className="text-xs text-gray-400 line-through">₹2.00</p>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-green-600">₹0.80</span>
-                    <p className="text-xs text-gray-400 line-through">₹1.00</p>
-                  </div>
-                </div>
-
-                {/* Tier 3 */}
-                <div className="grid grid-cols-3 gap-4 p-6 items-center hover:bg-green-50 transition-colors">
-                  <div className="text-center">
-                    <span className="text-gray-700 font-semibold">5,000 - 9,999</span>
-                    <p className="text-xs text-green-600 font-medium">25% OFF</p>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-green-600">₹1.50</span>
-                    <p className="text-xs text-gray-400 line-through">₹2.00</p>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-3xl font-bold text-green-600">₹0.50</span>
-                    <p className="text-xs text-gray-400 line-through">₹1.00</p>
-                  </div>
-                </div>
-
-                {/* Tier 4 - Best Value */}
-                <div className="grid grid-cols-3 gap-4 p-6 items-center bg-gradient-to-r from-green-100 to-emerald-100 relative">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-1 rounded-full text-sm font-bold">
+                {/* Utility - Best Value */}
+                <div className="rounded-2xl border-2 border-green-500 bg-green-50/50 p-6 text-center relative shadow-lg">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap">
                     🔥 BEST VALUE
                   </div>
-                  <div className="text-center">
-                    <span className="text-gray-900 font-bold text-lg">10,000+</span>
-                    <p className="text-xs text-green-700 font-bold">UP TO 50% OFF!</p>
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="text-center">
-                    <span className="text-4xl font-bold text-green-700">₹1.00</span>
-                    <p className="text-xs text-gray-500 line-through">₹2.00</p>
+                  <div className="font-semibold text-gray-700 mb-2">Utility</div>
+                  <div className="text-4xl font-bold text-green-700">₹0.20</div>
+                  <p className="text-xs text-gray-400 mt-1">per message</p>
+                </div>
+
+                {/* Authentication */}
+                <div className="rounded-2xl border border-gray-200 p-6 text-center hover:shadow-lg transition-shadow">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Shield className="w-6 h-6 text-green-600" />
                   </div>
-                  <div className="text-center">
-                    <span className="text-4xl font-bold text-green-700">₹0.25</span>
-                    <p className="text-xs text-gray-500 line-through">₹1.00</p>
-                  </div>
+                  <div className="font-semibold text-gray-700 mb-2">Authentication</div>
+                  <div className="text-4xl font-bold text-gray-900">₹0.20</div>
+                  <p className="text-xs text-gray-400 mt-1">per message</p>
                 </div>
               </div>
             </div>
 
-            {/* Price Reset Note */}
+            {/* Pricing Note */}
             <div className="mt-8 text-center">
               <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-6 py-3 rounded-full">
                 <Clock className="w-5 h-5" />
-                <span className="font-medium">Pricing resets on 1st of every month - Your savings start fresh!</span>
+                <span className="font-medium">₹499/month + pay only for the messages you send. No hidden charges.</span>
               </div>
             </div>
 
@@ -855,7 +835,7 @@ export default function Landing() {
             Join thousands of businesses using Akashvanni's AI-powered platform.
           </p>
           <p className="text-green-200 mb-8">
-            No monthly fees. No credit card required. Start free today.
+            Just ₹499/month. No credit card required to start. Get going today.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -885,7 +865,7 @@ export default function Landing() {
                 <span className="text-xl font-bold text-white">Akashvanni</span>
               </div>
               <p className="text-gray-400">
-                AI-Powered WhatsApp Automation Platform. No monthly fees, just results.
+                AI-Powered WhatsApp Automation Platform. One flat ₹499/month plan, just results.
               </p>
             </div>
 
